@@ -5,8 +5,11 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
+//import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,6 +44,9 @@ fun EditorScreen(
     var content by remember { mutableStateOf(diaryRepository.readEntryContent(file)) }
     val context = LocalContext.current
 
+    // Scroll state for both view and edit
+    val scrollState = rememberScrollState()
+
     // Intercept system back when in edit mode
     BackHandler(enabled = isEditMode) {
         // Save on back
@@ -57,32 +63,28 @@ fun EditorScreen(
                 navigationIcon = {
                     IconButton(onClick = {
                         if (isEditMode) {
-                            // Save before navigating up
                             if (diaryRepository.writeEntryContent(file, content)) {
                                 Toast.makeText(context, "Saved", Toast.LENGTH_SHORT).show()
                             }
                         }
                         onNavigateUp()
                     }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    if (isEditMode) {
-                        // Save content
-                        if (diaryRepository.writeEntryContent(file, content)) {
-                            Toast.makeText(context, "Saved", Toast.LENGTH_SHORT).show()
-                        }
+            FloatingActionButton(onClick = {
+                if (isEditMode) {
+                    if (diaryRepository.writeEntryContent(file, content)) {
+                        Toast.makeText(context, "Saved", Toast.LENGTH_SHORT).show()
                     }
-                    isEditMode = !isEditMode
                 }
-            ) {
+                isEditMode = !isEditMode
+            }) {
                 Icon(
-                    if (isEditMode) Icons.Filled.Done else Icons.Filled.Edit,
+                    imageVector = if (isEditMode) Icons.Default.Done else Icons.Default.Edit,
                     contentDescription = if (isEditMode) "Save" else "Edit"
                 )
             }
@@ -96,6 +98,8 @@ fun EditorScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .padding(16.dp)
+                    .verticalScroll(scrollState),
+                label = { Text("Write your thoughts...") }
             )
         } else {
             Text(
@@ -104,6 +108,7 @@ fun EditorScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .padding(16.dp)
+                    .verticalScroll(scrollState)
             )
         }
     }

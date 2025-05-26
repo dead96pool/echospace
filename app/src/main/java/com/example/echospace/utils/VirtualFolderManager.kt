@@ -68,4 +68,43 @@ class VirtualFolderManager {
         val parts = currentPath.split("#")
         return if (parts.size == 1) "" else parts.dropLast(1).joinToString("#")
     }
+
+
+    fun findNearestParentWithContent(
+        currentPath: String,
+        entries: List<DiaryEntry>
+    ): String {
+        if (currentPath.isEmpty()) return ""
+
+        val pathParts = currentPath.split("#")
+
+        // Check each parent level from current up to root
+        for (i in pathParts.size - 1 downTo 0) {
+            val parentPath = if (i == 0) "" else pathParts.take(i).joinToString("#")
+
+            if (hasContentInPath(parentPath, entries)) {
+                return parentPath
+            }
+        }
+
+        return "" // Return to root if no parent has content
+    }
+
+    fun hasContentInPath(path: String, entries: List<DiaryEntry>): Boolean {
+        if (path.isEmpty()) {
+            // Root has content if there are untagged files or any tagged files
+            return entries.isNotEmpty()
+        }
+
+        val pathParts = path.split("#")
+
+        return entries.any { entry ->
+            entry.tags.any { tagPath ->
+                val tagParts = tagPath.split("#")
+                // Check if this tag starts with our path
+                tagParts.size >= pathParts.size &&
+                        tagParts.take(pathParts.size) == pathParts
+            }
+        }
+    }
 }

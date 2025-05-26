@@ -1,11 +1,7 @@
-- check the icons and the colours in the background
 - markdown parsing
-- scrolling in the view only mode not working
-- word count updating only when another new file is created
 - sorting based on modified time or alphabetical
-- showing correct error messages while creating new file
-
-- topbar size
+- showing correct error messages while creating new file "file already present"
+- topbar size consistent between the scolling view mode and all the other screens
 - theme switch
 - file search icon
 - undo and redo working

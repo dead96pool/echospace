@@ -16,4 +16,5 @@ interface DiaryRepository {
 
     fun getFolderContents(currentPath: String): List<FolderItem>
     fun getParentPath(currentPath: String): String?
+    fun hasContentInPath(path: String): Boolean
 }

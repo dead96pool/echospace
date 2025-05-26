@@ -57,6 +57,9 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
+    // Add this for pull refresh
+    implementation("androidx.compose.material:material:1.6.0")
+
     // System UI Controller for handling navigation bar colors
     implementation("com.google.accompanist:accompanist-systemuicontroller:0.32.0")
 

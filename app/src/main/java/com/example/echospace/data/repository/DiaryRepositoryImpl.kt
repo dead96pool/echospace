@@ -48,4 +48,14 @@ class DiaryRepositoryImpl(private val fileManager: FileManager) : DiaryRepositor
     override fun getParentPath(currentPath: String): String? {
         return virtualFolderManager.getParentPath(currentPath)
     }
+
+    override fun hasContentInPath(path: String): Boolean {
+        val allEntries = getAllEntries()
+        return virtualFolderManager.hasContentInPath(path, allEntries)
+    }
+
+    fun findNearestParentWithContent(currentPath: String): String {
+        val allEntries = getAllEntries()
+        return virtualFolderManager.findNearestParentWithContent(currentPath, allEntries)
+    }
 }

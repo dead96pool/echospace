@@ -1,0 +1,15 @@
+- check the icons and the colours in the background
+- markdown parsing
+- scrolling in the view only mode not working
+- word count updating only when another new file is created
+- sorting based on modified time or alphabetical
+- showing correct error messages while creating new file
+
+- topbar size
+- theme switch
+- file search icon
+- undo and redo working
+- cloud sync
+- sorting order (last modified and name)
+- db to store the notes
+- possible summary of the notes to include in the filelist screen

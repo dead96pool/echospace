@@ -4,6 +4,7 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -17,6 +18,7 @@ import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Search
@@ -57,7 +59,10 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
-fun HomeScreen(diaryRepository: DiaryRepository) {
+fun HomeScreen(diaryRepository: DiaryRepository,
+               isDarkTheme: Boolean = false,
+               onThemeToggle: () -> Unit = {}
+) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
@@ -137,8 +142,15 @@ fun HomeScreen(diaryRepository: DiaryRepository) {
                     IconButton(onClick = { /* TODO: Search */ }) {
                         Icon(Icons.Default.Search, contentDescription = "Search")
                     }
-                    IconButton(onClick = { /* TODO: Theme toggle */ }) {
-                        Icon(Icons.Default.LightMode, contentDescription = "Toggle Theme")
+                    // Theme toggle button with dynamic icon
+                    IconButton(onClick = onThemeToggle) {
+                        Icon(
+                            imageVector = if (isDarkTheme)
+                                Icons.Default.LightMode
+                            else
+                                Icons.Default.DarkMode,
+                            contentDescription = "Toggle Theme"
+                        )
                     }
                 }
             )
@@ -177,6 +189,7 @@ fun HomeScreen(diaryRepository: DiaryRepository) {
                 items(folderContents) { folderItem ->
                     FolderItemComponent(
                         item = folderItem,
+                        isDarkTheme = isDarkTheme, // Pass the theme state
                         onClick = {
                             if (folderItem.isFolder) {
                                 currentPath = folderItem.path
@@ -188,8 +201,8 @@ fun HomeScreen(diaryRepository: DiaryRepository) {
                                 }
                             }
                         },
-                        onRename = { it.entry?.let { entryToRename = it } },
-                        onDelete = { it.entry?.let { entryToDelete = it } }
+                        onRename = { item -> item.entry?.let { entryToRename = it } },
+                        onDelete = { item -> item.entry?.let { entryToDelete = it } }
                     )
                 }
             }

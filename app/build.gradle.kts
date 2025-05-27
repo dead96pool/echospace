@@ -60,6 +60,12 @@ dependencies {
     // Add this for pull refresh
     implementation("androidx.compose.material:material:1.6.0")
 
+    // DataStore for theme preferences
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+    // Lifecycle compose
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
+
     // System UI Controller for handling navigation bar colors
     implementation("com.google.accompanist:accompanist-systemuicontroller:0.32.0")
 

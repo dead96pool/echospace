@@ -39,50 +39,69 @@ import com.example.echospace.utils.getRelativeTimeText
 @Composable
 fun FolderItemComponent(
     item: FolderItem,
+    isDarkTheme: Boolean, // Add this parameter
     onClick: () -> Unit,
     onRename: ((FolderItem) -> Unit)? = null,
     onDelete: ((FolderItem) -> Unit)? = null
 ) {
-    // decide black or white based on theme
-    val iconTint = if (isSystemInDarkTheme()) Color.White else Color.Black
-    var showMenu by remember { mutableStateOf(false) }
-    //var showDropdownMenu by remember { mutableStateOf(false) }
+
+    // Updated icon colors - very light grey for dark mode
+    val iconTint = if (isDarkTheme) {
+        Color(0xFFF0F0F0) // Very light grey (almost white) for dark theme
+    } else {
+        Color(0xFF757575) // Medium grey for light theme
+    }
+
+    var showDropdownMenu by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = { if (!item.isFolder) showMenu = true })
-            .padding(12.dp),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    if (!item.isFolder && (onRename != null || onDelete != null)) {
+                        showDropdownMenu = true
+                    }
+                }
+            )
+            .padding(vertical = 12.dp, horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // folder or file icon
+        // Icon with updated color
         Icon(
             imageVector = if (item.isFolder) Icons.Default.Folder else Icons.Default.Description,
-            contentDescription = null,
-            tint = iconTint,
-            modifier = Modifier.size(24.dp)
+            contentDescription = if (item.isFolder) "Folder" else "Note",
+            modifier = Modifier.size(24.dp),
+            tint = iconTint
         )
 
-        Spacer(Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(16.dp))
 
+        // Item details
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = item.name,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = if (item.isFolder) FontWeight.Bold else FontWeight.Medium
             )
+
             if (!item.isFolder && item.entry != null) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = "${countWords(item.entry.file)} words",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
                     Text(
                         text = " | ",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
                     Text(
                         text = getRelativeTimeText(item.entry.lastModified),
                         style = MaterialTheme.typography.bodySmall,
@@ -92,37 +111,42 @@ fun FolderItemComponent(
             }
         }
 
+        // Update dropdown menu icons too
         if (!item.isFolder) {
-            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                onRename?.let { rename ->
+            DropdownMenu(
+                expanded = showDropdownMenu,
+                onDismissRequest = { showDropdownMenu = false }
+            ) {
+                onRename?.let {
                     DropdownMenuItem(
+                        text = { Text("Rename") },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Edit,
                                 contentDescription = "Rename",
-                                tint = iconTint
+                                tint = iconTint // Same very light grey in dark mode
                             )
                         },
-                        text = { Text("Rename") },
                         onClick = {
-                            rename(item)
-                            showMenu = false
+                            it(item)
+                            showDropdownMenu = false
                         }
                     )
                 }
-                onDelete?.let { delete ->
+
+                onDelete?.let {
                     DropdownMenuItem(
+                        text = { Text("Delete") },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Delete,
                                 contentDescription = "Delete",
-                                tint = iconTint
+                                tint = iconTint // Same very light grey in dark mode
                             )
                         },
-                        text = { Text("Delete") },
                         onClick = {
-                            delete(item)
-                            showMenu = false
+                            it(item)
+                            showDropdownMenu = false
                         }
                     )
                 }

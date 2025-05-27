@@ -1,6 +1,6 @@
+// ui/theme/Theme.kt
 package com.example.echospace.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -9,38 +9,50 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
+// Custom grey colors
+private val DarkGrey = Color(0xFF424242)
+private val LightGrey = Color(0xFF757575)
+private val MediumGrey = Color(0xFF616161)
+private val VeryLightGrey = Color(0xFFF5F5F5)
+
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = Color(0xFFBB86FC),
+    secondary = Color(0xFF03DAC6),
+    tertiary = Color(0xFF3700B3),
+    background = DarkGrey,
+    surface = Color(0xFF2D2D2D),
+    onBackground = Color.White,
+    onSurface = Color.White,
+    onPrimary = Color.Black,
+    onSecondary = Color.Black,
+    surfaceVariant = MediumGrey,
+    onSurfaceVariant = Color(0xFFE0E0E0)
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
+    primary = Color(0xFF6200EE),
+    secondary = Color(0xFF03DAC6),
+    tertiary = Color(0xFF3700B3),
+    background = Color.White,
+    surface = VeryLightGrey,
+    onBackground = Color.Black,
+    onSurface = Color.Black,
     onPrimary = Color.White,
     onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    surfaceVariant = Color(0xFFF0F0F0),
+    onSurfaceVariant = LightGrey
 )
 
 @Composable
 fun EchoSpaceTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false, // Set to false to use custom colors
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -52,17 +64,13 @@ fun EchoSpaceTheme(
         else -> LightColorScheme
     }
 
-    // Set system bars color
     val systemUiController = rememberSystemUiController()
     SideEffect {
-        // Set status bar color
-        systemUiController.setStatusBarColor(
+        systemUiController.setNavigationBarColor(
             color = colorScheme.surface,
             darkIcons = !darkTheme
         )
-
-        // Set navigation bar color with visible icons
-        systemUiController.setNavigationBarColor(
+        systemUiController.setStatusBarColor(
             color = colorScheme.surface,
             darkIcons = !darkTheme
         )

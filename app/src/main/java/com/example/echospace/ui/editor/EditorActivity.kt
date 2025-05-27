@@ -7,9 +7,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.echospace.data.local.FileManager
 import com.example.echospace.data.repository.DiaryRepositoryImpl
@@ -46,6 +48,13 @@ class EditorActivity : ComponentActivity() {
         setContent {
             // Collect theme state from preferences
             val isDarkTheme by themePreferences.isDarkTheme.collectAsState(initial = false)
+
+
+            LaunchedEffect(isDarkTheme) {
+                val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+                windowInsetsController.isAppearanceLightStatusBars = !isDarkTheme
+                windowInsetsController.isAppearanceLightNavigationBars = !isDarkTheme
+            }
 
             EchoSpaceTheme(
                 darkTheme = isDarkTheme,

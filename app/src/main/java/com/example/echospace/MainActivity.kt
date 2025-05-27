@@ -7,9 +7,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.echospace.data.local.FileManager
 import com.example.echospace.data.repository.DiaryRepositoryImpl
@@ -36,6 +38,14 @@ class MainActivity : ComponentActivity() {
         setContent {
             // Collect theme state from preferences (defaults to light theme)
             val isDarkTheme by themePreferences.isDarkTheme.collectAsState(initial = false)
+
+            LaunchedEffect(isDarkTheme) {
+                val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+                // Set status bar icons to light (white) in dark theme, dark (black) in light theme
+                windowInsetsController.isAppearanceLightStatusBars = !isDarkTheme
+                // Set navigation bar icons to light (white) in dark theme, dark (black) in light theme
+                windowInsetsController.isAppearanceLightNavigationBars = !isDarkTheme
+            }
 
             // Use manual theme control, ignoring system theme
             EchoSpaceTheme(

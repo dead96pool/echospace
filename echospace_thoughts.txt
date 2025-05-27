@@ -1,3 +1,4 @@
+- fix scrolling with the keyboard open (shift the view above the keyboard)
 - markdown parsing (heading basically for now)
 - heading autoadd as the name of the file
 - sorting based on modified time or alphabetical

@@ -3,6 +3,7 @@ package com.example.echospace
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -23,6 +24,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Enable edge-to-edge display
+        enableEdgeToEdge()
+
         themePreferences = ThemePreferences(this)
 
         // Initialize repository
@@ -35,8 +39,8 @@ class MainActivity : ComponentActivity() {
 
             // Use manual theme control, ignoring system theme
             EchoSpaceTheme(
-                darkTheme = isDarkTheme, // Use stored preference instead of system theme
-                dynamicColor = false // Disable dynamic colors to use custom theme
+                darkTheme = isDarkTheme,
+                dynamicColor = false
             ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -46,7 +50,6 @@ class MainActivity : ComponentActivity() {
                         diaryRepository = diaryRepository,
                         isDarkTheme = isDarkTheme,
                         onThemeToggle = {
-                            // Toggle theme and save preference
                             lifecycleScope.launch {
                                 themePreferences.setDarkTheme(!isDarkTheme)
                             }

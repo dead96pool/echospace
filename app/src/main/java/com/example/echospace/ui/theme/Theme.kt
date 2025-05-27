@@ -9,10 +9,8 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
 // Custom grey colors
 private val DarkGrey = Color(0xFF424242)
@@ -51,8 +49,7 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun EchoSpaceTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = false, // Set to false to use custom colors
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -62,18 +59,6 @@ fun EchoSpaceTheme(
         }
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
-    }
-
-    val systemUiController = rememberSystemUiController()
-    SideEffect {
-        systemUiController.setNavigationBarColor(
-            color = colorScheme.surface,
-            darkIcons = !darkTheme
-        )
-        systemUiController.setStatusBarColor(
-            color = colorScheme.surface,
-            darkIcons = !darkTheme
-        )
     }
 
     MaterialTheme(

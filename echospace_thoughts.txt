@@ -1,8 +1,9 @@
-- markdown parsing
+- markdown parsing (heading basically for now)
+- heading autoadd as the name of the file
 - sorting based on modified time or alphabetical
 - showing correct error messages while creating new file "file already present"
 - topbar size consistent between the scolling view mode and all the other screens
-- theme switch
+
 - file search icon
 - undo and redo working
 - cloud sync

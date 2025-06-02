@@ -1,5 +1,5 @@
 // data/local/FileManager.kt
-// Modify your existing FileManager class to fit this structure
+
 package com.example.echospace.data.local
 
 import android.content.Context
@@ -94,5 +94,11 @@ class FileManager(private val context: Context) {
             e.printStackTrace()
             false
         }
+    }
+
+    fun fileExists(fileName: String): Boolean {
+        val sanitizedName = sanitizeFileName(fileName)
+        val file = File(rootDir, "$sanitizedName.txt")
+        return file.exists()
     }
 }

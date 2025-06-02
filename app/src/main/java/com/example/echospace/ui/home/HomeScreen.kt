@@ -3,6 +3,7 @@ package com.example.echospace.ui.home
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 //import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -30,7 +31,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+//import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -38,7 +39,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+//import androidx.compose.runtime.rememberLauncherForActivityResult
 import androidx.compose.runtime.setValue
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -53,9 +56,12 @@ import com.example.echospace.ui.components.CreateEntryDialog
 import com.example.echospace.ui.components.DeleteConfirmationDialog
 import com.example.echospace.ui.components.FolderItemComponent
 import com.example.echospace.ui.components.RenameEntryDialog
+import com.example.echospace.ui.components.SlimTopAppBar
 import com.example.echospace.ui.editor.EditorActivity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import android.app.Activity
+import com.example.echospace.domain.model.CreateFileResult
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
@@ -72,6 +78,8 @@ fun HomeScreen(diaryRepository: DiaryRepository,
     var entryToDelete by remember { mutableStateOf<DiaryEntry?>(null) }
     var refreshTrigger by remember { mutableIntStateOf(0) }
     var isRefreshing by remember { mutableStateOf(false) }
+
+    var createDialogErrorMessage by remember { mutableStateOf("") }
 
     // Intercept system back when in a subfolder
     BackHandler(enabled = currentPath.isNotEmpty()) {
@@ -123,11 +131,26 @@ fun HomeScreen(diaryRepository: DiaryRepository,
         currentPath = nearestParent
     }
 
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.getStringExtra("new_path")?.let { newPath ->
+                currentPath = newPath
+            }
+        }
+        // Refresh folder contents regardless
+        refreshTrigger++
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(
+            SlimTopAppBar(
                 title = {
-                    Text(if (currentPath.isEmpty()) "EchoSpace" else currentPath.replace("#", " / "))
+                    Text(
+                        text = if (currentPath.isEmpty()) "EchoSpace" else currentPath.replace("#", " / "),
+                        style = MaterialTheme.typography.titleMedium // Use smaller text style
+                    )
                 },
                 navigationIcon = {
                     if (currentPath.isNotEmpty()) {
@@ -142,7 +165,6 @@ fun HomeScreen(diaryRepository: DiaryRepository,
                     IconButton(onClick = { /* TODO: Search */ }) {
                         Icon(Icons.Default.Search, contentDescription = "Search")
                     }
-                    // Theme toggle button with dynamic icon
                     IconButton(onClick = onThemeToggle) {
                         Icon(
                             imageVector = if (isDarkTheme)
@@ -189,15 +211,17 @@ fun HomeScreen(diaryRepository: DiaryRepository,
                 items(folderContents) { folderItem ->
                     FolderItemComponent(
                         item = folderItem,
-                        isDarkTheme = isDarkTheme, // Pass the theme state
+                        isDarkTheme = isDarkTheme,
                         onClick = {
                             if (folderItem.isFolder) {
                                 currentPath = folderItem.path
                             } else {
                                 folderItem.entry?.let { entry ->
-                                    val intent = Intent(context, EditorActivity::class.java)
-                                        .apply { putExtra("file_path", entry.file.absolutePath) }
-                                    context.startActivity(intent)
+                                    val intent = Intent(context, EditorActivity::class.java).apply {
+                                        putExtra("file_path", entry.file.absolutePath)
+                                        putExtra("current_path", currentPath) // Pass current path
+                                    }
+                                    launcher.launch(intent) // Use launcher instead of startActivity
                                 }
                             }
                         },
@@ -220,27 +244,36 @@ fun HomeScreen(diaryRepository: DiaryRepository,
         // Create dialog
         if (showCreateDialog) {
             CreateEntryDialog(
-                onDismiss = { showCreateDialog = false },
-                onFileNameConfirmed = { fileName ->
-                    val file = if (fileName.isBlank())
-                        diaryRepository.createEntryWithCurrentDate()
-                    else
-                        diaryRepository.createEntry(fileName)
-
-                    if (file != null) {
-                        context.startActivity(
-                            Intent(context, EditorActivity::class.java)
-                                .apply {
-                                    putExtra("file_path", file.absolutePath)
-                                    putExtra("edit_mode", true)
-                                }
-                        )
-                    } else {
-                        Toast.makeText(context, "Failed to create file", Toast.LENGTH_SHORT).show()
-                    }
-
+                onDismiss = {
                     showCreateDialog = false
-                    refreshTrigger++
+                    createDialogErrorMessage = "" // Clear error when dismissing
+                },
+                errorMessage = createDialogErrorMessage,
+                onFileNameConfirmed = { fileName ->
+                    val (result, file) = diaryRepository.createEntryWithResult(fileName)
+
+                    when (result) {
+                        CreateFileResult.SUCCESS -> {
+                            file?.let {
+                                val intent = Intent(context, EditorActivity::class.java).apply {
+                                    putExtra("file_path", it.absolutePath)
+                                    putExtra("edit_mode", true)
+                                    putExtra("current_path", currentPath)
+                                }
+                                launcher.launch(intent)
+                            }
+                            createDialogErrorMessage = ""
+                            CreateFileResult.SUCCESS
+                        }
+                        CreateFileResult.FILENAME_EXISTS -> {
+                            createDialogErrorMessage = "Filename already exists!" // Make sure this is set
+                            CreateFileResult.FILENAME_EXISTS
+                        }
+                        CreateFileResult.OTHER_ERROR -> {
+                            createDialogErrorMessage = "Failed to create file"
+                            CreateFileResult.OTHER_ERROR
+                        }
+                    }
                 }
             )
         }

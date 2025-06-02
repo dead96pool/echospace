@@ -1,9 +1,8 @@
-- fix scrolling with the keyboard open (shift the view above the keyboard)
+
 - markdown parsing (heading basically for now)
 - heading autoadd as the name of the file
 - sorting based on modified time or alphabetical
 - showing correct error messages while creating new file "file already present"
-- topbar size consistent between the scolling view mode and all the other screens
 
 - file search icon
 - undo and redo working

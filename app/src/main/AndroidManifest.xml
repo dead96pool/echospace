@@ -27,7 +27,8 @@
         <activity
             android:name=".ui.editor.EditorActivity"
             android:exported="false"
-            android:theme="@style/Theme.EchoSpace" />
+            android:theme="@style/Theme.EchoSpace"
+            android:windowSoftInputMode="adjustResize" />
     </application>
 
 </manifest>

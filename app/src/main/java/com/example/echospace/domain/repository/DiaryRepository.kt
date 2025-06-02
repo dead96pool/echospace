@@ -3,6 +3,7 @@ package com.example.echospace.domain.repository
 
 import com.example.echospace.domain.model.DiaryEntry
 import com.example.echospace.domain.model.FolderItem
+import com.example.echospace.domain.model.CreateFileResult
 import java.io.File
 
 interface DiaryRepository {
@@ -13,8 +14,10 @@ interface DiaryRepository {
     fun writeEntryContent(file: File, content: String): Boolean
     fun renameEntry(file: File, newName: String): Boolean
     fun deleteEntry(file: File): Boolean
-
     fun getFolderContents(currentPath: String): List<FolderItem>
     fun getParentPath(currentPath: String): String?
     fun hasContentInPath(path: String): Boolean
+
+    fun createEntryWithResult(fileName: String): Pair<CreateFileResult, File?>
+    fun createEntryWithCurrentDateResult(): Pair<CreateFileResult, File?>
 }

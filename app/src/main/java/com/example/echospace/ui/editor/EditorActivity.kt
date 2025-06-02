@@ -1,5 +1,6 @@
 package com.example.echospace.ui.editor
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -29,10 +30,14 @@ class EditorActivity : ComponentActivity() {
         // Enable edge-to-edge display
         enableEdgeToEdge()
 
+        // Configure window for proper keyboard handling
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
         themePreferences = ThemePreferences(this)
 
         val filePath = intent.getStringExtra("file_path") ?: ""
         val startInEditMode = intent.getBooleanExtra("edit_mode", false)
+        val currentPath = intent.getStringExtra("current_path") ?: ""
 
         if (filePath.isEmpty()) {
             finish()
@@ -48,7 +53,6 @@ class EditorActivity : ComponentActivity() {
         setContent {
             // Collect theme state from preferences
             val isDarkTheme by themePreferences.isDarkTheme.collectAsState(initial = false)
-
 
             LaunchedEffect(isDarkTheme) {
                 val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
@@ -69,10 +73,18 @@ class EditorActivity : ComponentActivity() {
                         diaryRepository = diaryRepository,
                         startInEditMode = startInEditMode,
                         isDarkTheme = isDarkTheme,
+                        currentPath = currentPath,
                         onThemeToggle = {
                             lifecycleScope.launch {
                                 themePreferences.setDarkTheme(!isDarkTheme)
                             }
+                        },
+                        onPathChanged = { newPath ->
+                            // Return the new path to the calling activity
+                            val resultIntent = Intent().apply {
+                                putExtra("new_path", newPath)
+                            }
+                            setResult(RESULT_OK, resultIntent)
                         },
                         onNavigateUp = { finish() }
                     )

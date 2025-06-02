@@ -38,10 +38,13 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -67,7 +70,15 @@ fun EditorScreen(
 
     // Use TextFieldValue to track cursor position
     var textFieldValue by remember {
-        mutableStateOf(TextFieldValue(diaryRepository.readEntryContent(file)))
+        val content = diaryRepository.readEntryContent(file)
+        mutableStateOf(
+            if (startInEditMode && content.startsWith("# ")) {
+                // Position cursor at the end for new files
+                TextFieldValue(content, TextRange(content.length))
+            } else {
+                TextFieldValue(content)
+            }
+        )
     }
 
     val context = LocalContext.current
@@ -229,6 +240,13 @@ fun EditorScreen(
                     },
                     textStyle = MaterialTheme.typography.bodyMedium.copy(
                         color = MaterialTheme.colorScheme.onBackground
+                    ),
+                    cursorBrush = SolidColor(
+                        if (isDarkTheme) {
+                            Color.White // White cursor for dark theme
+                        } else {
+                            MaterialTheme.colorScheme.primary // This gives you the grey from your theme
+                        }
                     ),
                     modifier = Modifier
                         .fillMaxSize()

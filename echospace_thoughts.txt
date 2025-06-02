@@ -1,9 +1,11 @@
-
+basic functionality:
+- add the folder hash at the end of a new file created based on the current position in folderstructure
 - markdown parsing (heading basically for now)
-- heading autoadd as the name of the file
-- sorting based on modified time or alphabetical
-- showing correct error messages while creating new file "file already present"
 
+
+
+future features:
+- sorting based on modified time or alphabetical
 - file search icon
 - undo and redo working
 - cloud sync

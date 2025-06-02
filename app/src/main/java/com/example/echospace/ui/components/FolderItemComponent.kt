@@ -49,7 +49,8 @@ fun FolderItemComponent(
     val iconTint = if (isDarkTheme) {
         Color(0xFFF0F0F0) // Very light grey (almost white) for dark theme
     } else {
-        Color(0xFF757575) // Medium grey for light theme
+        MaterialTheme.colorScheme.onSurfaceVariant
+        //Color(0xFF757575) // Medium grey for light theme
     }
 
     var showDropdownMenu by remember { mutableStateOf(false) }

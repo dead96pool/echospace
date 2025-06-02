@@ -27,25 +27,53 @@ class FileManager(private val context: Context) {
     }
 
     fun createFile(fileName: String): File? {
-        val sanitizedName = sanitizeFileName(fileName)
-        val file = File(rootDir, "$sanitizedName.txt")
-
         return try {
+            val sanitizedName = sanitizeFileName(fileName)
+            val file = File(rootDir, "$sanitizedName.txt")
+
             if (file.createNewFile()) {
+                // Add filename and time as first line of editable content
+                val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+                val currentTime = timeFormat.format(Date())
+                                    .uppercase()
+                                    .replace(".", "")
+                val firstLine = "# $sanitizedName  $currentTime\n\n"
+
+                file.writeText(firstLine)
                 file
             } else {
                 null
             }
-        } catch (e: IOException) {
-            e.printStackTrace()
+        } catch (e: Exception) {
             null
         }
     }
 
     fun createFileWithCurrentDate(): File? {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val fileName = dateFormat.format(Date())
-        return createFile(fileName)
+        return try {
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val fileName = dateFormat.format(Date())
+            val file = File(rootDir, "$fileName.txt")
+
+            if (file.createNewFile()) {
+                // Add date and time as first line of editable content
+                val displayDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+                val currentDate = Date()
+                val displayDate = displayDateFormat.format(currentDate)
+                val displayTime = timeFormat.format(currentDate)
+                                    .uppercase()
+                                    .replace(".", "")
+                val firstLine = "# $displayDate  $displayTime\n\n"
+
+                file.writeText(firstLine)
+                file
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun readFileContent(file: File): String {

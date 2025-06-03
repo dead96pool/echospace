@@ -60,7 +60,7 @@ fun EditorScreen(
     file: File,
     diaryRepository: DiaryRepository,
     startInEditMode: Boolean,
-    @Suppress("UNUSED_PARAMETER") isDarkTheme: Boolean,
+    isDarkTheme: Boolean,
     @Suppress("UNUSED_PARAMETER") onThemeToggle: () -> Unit,
     onNavigateUp: () -> Unit,
     currentPath: String = "",

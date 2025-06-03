@@ -26,7 +26,7 @@ class FileManager(private val context: Context) {
             ?: emptyList()
     }
 
-    fun createFile(fileName: String): File? {
+    fun createFile(fileName: String, currentPath: String = ""): File? {
         return try {
             val sanitizedName = sanitizeFileName(fileName)
             val file = File(rootDir, "$sanitizedName.txt")
@@ -39,7 +39,15 @@ class FileManager(private val context: Context) {
                                     .replace(".", "")
                 val firstLine = "# $sanitizedName  $currentTime\n\n"
 
-                file.writeText(firstLine)
+                // Add hashtag categorization based on current path
+                val content = if (currentPath.isNotEmpty()) {
+                    val hashtagPath = "#${currentPath.replace("/", "#")}"
+                    "$firstLine\n\n\n\n$hashtagPath"
+                } else {
+                    firstLine
+                }
+
+                file.writeText(content)
                 file
             } else {
                 null
@@ -49,7 +57,7 @@ class FileManager(private val context: Context) {
         }
     }
 
-    fun createFileWithCurrentDate(): File? {
+    fun createFileWithCurrentDate(currentPath: String = ""): File? {
         return try {
             val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
             val fileName = dateFormat.format(Date())
@@ -66,7 +74,15 @@ class FileManager(private val context: Context) {
                                     .replace(".", "")
                 val firstLine = "# $displayDate  $displayTime\n\n"
 
-                file.writeText(firstLine)
+                // Add hashtag categorization based on current path
+                val content = if (currentPath.isNotEmpty()) {
+                    val hashtagPath = "#${currentPath.replace("/", "#")}"
+                    "$firstLine\n\n\n\n$hashtagPath"
+                } else {
+                    firstLine
+                }
+
+                file.writeText(content)
                 file
             } else {
                 null
@@ -129,4 +145,5 @@ class FileManager(private val context: Context) {
         val file = File(rootDir, "$sanitizedName.txt")
         return file.exists()
     }
+
 }

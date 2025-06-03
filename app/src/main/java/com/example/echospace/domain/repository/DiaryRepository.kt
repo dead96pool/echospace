@@ -8,8 +8,8 @@ import java.io.File
 
 interface DiaryRepository {
     fun getAllEntries(): List<DiaryEntry>
-    fun createEntry(fileName: String): File?
-    fun createEntryWithCurrentDate(): File?
+    fun createEntry(fileName: String, currentPath: String = ""): File?
+    fun createEntryWithCurrentDate(currentPath: String = ""): File?
     fun readEntryContent(file: File): String
     fun writeEntryContent(file: File, content: String): Boolean
     fun renameEntry(file: File, newName: String): Boolean
@@ -18,6 +18,6 @@ interface DiaryRepository {
     fun getParentPath(currentPath: String): String?
     fun hasContentInPath(path: String): Boolean
 
-    fun createEntryWithResult(fileName: String): Pair<CreateFileResult, File?>
-    fun createEntryWithCurrentDateResult(): Pair<CreateFileResult, File?>
+    fun createEntryWithResult(fileName: String, currentPath: String = ""): Pair<CreateFileResult, File?>
+    fun createEntryWithCurrentDateResult(currentPath: String = ""): Pair<CreateFileResult, File?>
 }

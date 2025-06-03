@@ -23,7 +23,7 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.ExperimentalMaterial3Api
+//import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
@@ -63,7 +63,8 @@ import kotlinx.coroutines.launch
 import android.app.Activity
 import com.example.echospace.domain.model.CreateFileResult
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
+//@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun HomeScreen(diaryRepository: DiaryRepository,
                isDarkTheme: Boolean = false,
@@ -250,7 +251,7 @@ fun HomeScreen(diaryRepository: DiaryRepository,
                 },
                 errorMessage = createDialogErrorMessage,
                 onFileNameConfirmed = { fileName ->
-                    val (result, file) = diaryRepository.createEntryWithResult(fileName)
+                    val (result, file) = diaryRepository.createEntryWithResult(fileName, currentPath)
 
                     when (result) {
                         CreateFileResult.SUCCESS -> {

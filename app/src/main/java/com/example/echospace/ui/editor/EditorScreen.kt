@@ -73,8 +73,18 @@ fun EditorScreen(
         val content = diaryRepository.readEntryContent(file)
         mutableStateOf(
             if (startInEditMode && content.startsWith("# ")) {
-                // Position cursor at the end for new files
-                TextFieldValue(content, TextRange(content.length))
+                // Look for the pattern: first line + double newline
+                val doubleNewlineIndex = content.indexOf("\n\n")
+                if (doubleNewlineIndex != -1) {
+                    // Position cursor after the double newline
+                    val cursorPosition = doubleNewlineIndex + 3
+                    TextFieldValue(content, TextRange(cursorPosition))
+                } else {
+                    // Fallback: position after first line
+                    val firstLineEnd = content.indexOf('\n')
+                    val cursorPosition = if (firstLineEnd != -1) firstLineEnd + 1 else content.length
+                    TextFieldValue(content, TextRange(cursorPosition))
+                }
             } else {
                 TextFieldValue(content)
             }

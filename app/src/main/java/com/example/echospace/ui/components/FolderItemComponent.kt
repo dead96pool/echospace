@@ -13,9 +13,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Description
+//import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -71,9 +72,9 @@ fun FolderItemComponent(
     ) {
         // Icon with updated color
         Icon(
-            imageVector = if (item.isFolder) Icons.Default.Folder else Icons.Default.Description,
+            imageVector = if (item.isFolder) Icons.Default.Folder else Icons.AutoMirrored.Filled.InsertDriveFile,
             contentDescription = if (item.isFolder) "Folder" else "Note",
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(32.dp),
             tint = iconTint
         )
 

@@ -29,6 +29,8 @@
             android:exported="false"
             android:theme="@style/Theme.EchoSpace"
             android:windowSoftInputMode="adjustResize" />
+
+
     </application>
 
 </manifest>

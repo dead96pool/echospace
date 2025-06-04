@@ -1,14 +1,13 @@
 basic functionality:
-- add the folder hash at the end of a new file created based on the current position in folderstructure
 - markdown parsing (heading basically for now)
-
+- file navigation buy clicking the slimtopbar
+- topbar dropdown or settings screen for theme/sorting options
+- corrected word count to remove the header and filetag
 
 
 future features:
-- sorting based on modified time or alphabetical
 - file search icon
 - undo and redo working
 - cloud sync
-- sorting order (last modified and name)
 - db to store the notes
 - possible summary of the notes to include in the filelist screen

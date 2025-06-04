@@ -23,7 +23,12 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Search
+//import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Check
 //import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
@@ -61,7 +66,10 @@ import com.example.echospace.ui.editor.EditorActivity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import android.app.Activity
+import androidx.compose.runtime.collectAsState
 import com.example.echospace.domain.model.CreateFileResult
+import com.example.echospace.utils.SortPreferences
+import com.example.echospace.domain.repository.SortType
 
 //@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @OptIn(ExperimentalMaterialApi::class)
@@ -82,14 +90,20 @@ fun HomeScreen(diaryRepository: DiaryRepository,
 
     var createDialogErrorMessage by remember { mutableStateOf("") }
 
+    var showSortMenu by remember { mutableStateOf(false) }
+    val sortPreferences = remember { SortPreferences(context) }
+    val currentSortType by sortPreferences.sortType.collectAsState(initial = SortType.NAME_ASC)
+
+
+
     // Intercept system back when in a subfolder
     BackHandler(enabled = currentPath.isNotEmpty()) {
         currentPath = diaryRepository.getParentPath(currentPath) ?: ""
     }
 
     // Recompute folderContents whenever currentPath or refreshTrigger changes
-    val folderContents by remember(currentPath, refreshTrigger) {
-        mutableStateOf(diaryRepository.getFolderContents(currentPath))
+    val folderContents by remember(currentPath, refreshTrigger, currentSortType) {
+        mutableStateOf(diaryRepository.getFolderContentsSorted(currentPath, currentSortType))
     }
 
     // Observe Activity lifecycle to refresh when returning from editor
@@ -174,6 +188,74 @@ fun HomeScreen(diaryRepository: DiaryRepository,
                                 Icons.Default.DarkMode,
                             contentDescription = "Toggle Theme"
                         )
+                    }
+
+                    Box {
+                        IconButton(onClick = { showSortMenu = true }) {
+                            Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort")
+                        }
+
+                        DropdownMenu(
+                            expanded = showSortMenu,
+                            onDismissRequest = { showSortMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Name A-Z") },
+                                onClick = {
+                                    coroutineScope.launch {
+                                        sortPreferences.setSortType(SortType.NAME_ASC)
+                                    }
+                                    showSortMenu = false
+                                },
+                                leadingIcon = {
+                                    if (currentSortType == SortType.NAME_ASC) {
+                                        Icon(Icons.Default.Check, contentDescription = null)
+                                    }
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Name Z-A") },
+                                onClick = {
+                                    coroutineScope.launch {
+                                        sortPreferences.setSortType(SortType.NAME_DESC)
+                                    }
+                                    showSortMenu = false
+                                },
+                                leadingIcon = {
+                                    if (currentSortType == SortType.NAME_DESC) {
+                                        Icon(Icons.Default.Check, contentDescription = null)
+                                    }
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Newest First") },
+                                onClick = {
+                                    coroutineScope.launch {
+                                        sortPreferences.setSortType(SortType.TIME_DESC)
+                                    }
+                                    showSortMenu = false
+                                },
+                                leadingIcon = {
+                                    if (currentSortType == SortType.TIME_DESC) {
+                                        Icon(Icons.Default.Check, contentDescription = null)
+                                    }
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Oldest First") },
+                                onClick = {
+                                    coroutineScope.launch {
+                                        sortPreferences.setSortType(SortType.TIME_ASC)
+                                    }
+                                    showSortMenu = false
+                                },
+                                leadingIcon = {
+                                    if (currentSortType == SortType.TIME_ASC) {
+                                        Icon(Icons.Default.Check, contentDescription = null)
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             )

@@ -6,6 +6,7 @@ import com.example.echospace.domain.model.DiaryEntry
 import com.example.echospace.domain.model.FolderItem
 import com.example.echospace.domain.model.CreateFileResult
 import com.example.echospace.domain.repository.DiaryRepository
+import com.example.echospace.domain.repository.SortType
 import com.example.echospace.utils.VirtualFolderManager
 import java.io.File
 import java.text.SimpleDateFormat
@@ -99,6 +100,29 @@ class DiaryRepositoryImpl(private val fileManager: FileManager) : DiaryRepositor
         } else {
             // If creation failed but file doesn't exist, it's a different error
             Pair(CreateFileResult.OTHER_ERROR, null)
+        }
+    }
+
+    override fun getFolderContentsSorted(currentPath: String, sortType: SortType): List<FolderItem> {
+        val folderContents = virtualFolderManager.getFolderContents(getAllEntries(), currentPath)
+
+        return when (sortType) {
+            SortType.NAME_ASC -> folderContents.sortedWith(
+                compareBy<FolderItem> { !it.isFolder } // Folders first
+                    .thenBy { it.name.lowercase() } // Then by name (case-insensitive)
+            )
+            SortType.NAME_DESC -> folderContents.sortedWith(
+                compareBy<FolderItem> { !it.isFolder }
+                    .thenByDescending { it.name.lowercase() }
+            )
+            SortType.TIME_ASC -> folderContents.sortedWith(
+                compareBy<FolderItem> { !it.isFolder }
+                    .thenBy { it.entry?.lastModified ?: 0L }
+            )
+            SortType.TIME_DESC -> folderContents.sortedWith(
+                compareBy<FolderItem> { !it.isFolder }
+                    .thenByDescending { it.entry?.lastModified ?: 0L }
+            )
         }
     }
 }

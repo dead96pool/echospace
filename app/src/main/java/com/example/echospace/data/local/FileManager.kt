@@ -42,7 +42,7 @@ class FileManager(private val context: Context) {
                 // Add hashtag categorization based on current path
                 val content = if (currentPath.isNotEmpty()) {
                     val hashtagPath = "#${currentPath.replace("/", "#")}"
-                    "$firstLine\n\n\n\n$hashtagPath"
+                    "$firstLine\n\n$hashtagPath"
                 } else {
                     firstLine
                 }
@@ -77,7 +77,7 @@ class FileManager(private val context: Context) {
                 // Add hashtag categorization based on current path
                 val content = if (currentPath.isNotEmpty()) {
                     val hashtagPath = "#${currentPath.replace("/", "#")}"
-                    "$firstLine\n\n\n\n$hashtagPath"
+                    "$firstLine\n\n$hashtagPath"
                 } else {
                     firstLine
                 }

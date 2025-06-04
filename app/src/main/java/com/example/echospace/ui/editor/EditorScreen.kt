@@ -77,7 +77,7 @@ fun EditorScreen(
                 val doubleNewlineIndex = content.indexOf("\n\n")
                 if (doubleNewlineIndex != -1) {
                     // Position cursor after the double newline
-                    val cursorPosition = doubleNewlineIndex + 3
+                    val cursorPosition = doubleNewlineIndex + 2
                     TextFieldValue(content, TextRange(cursorPosition))
                 } else {
                     // Fallback: position after first line

@@ -24,6 +24,7 @@ import java.io.File
 class EditorActivity : ComponentActivity() {
     private lateinit var themePreferences: ThemePreferences
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -45,6 +46,7 @@ class EditorActivity : ComponentActivity() {
         }
 
         val file = File(filePath)
+
 
         // Initialize repository
         val fileManager = FileManager(this)

@@ -6,6 +6,13 @@ import com.example.echospace.domain.model.FolderItem
 import com.example.echospace.domain.model.CreateFileResult
 import java.io.File
 
+enum class SortType {
+    NAME_ASC,
+    NAME_DESC,
+    TIME_ASC,
+    TIME_DESC
+}
+
 interface DiaryRepository {
     fun getAllEntries(): List<DiaryEntry>
     fun createEntry(fileName: String, currentPath: String = ""): File?
@@ -20,4 +27,6 @@ interface DiaryRepository {
 
     fun createEntryWithResult(fileName: String, currentPath: String = ""): Pair<CreateFileResult, File?>
     fun createEntryWithCurrentDateResult(currentPath: String = ""): Pair<CreateFileResult, File?>
+
+    fun getFolderContentsSorted(currentPath: String, sortType: SortType): List<FolderItem>
 }

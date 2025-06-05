@@ -6,12 +6,53 @@ import java.util.Date
 import java.util.Locale
 import java.util.Calendar
 
+private val titlePattern = Regex("^#\\s.+?\\s\\d{1,2}:\\d{2}\\s(?:AM|PM)$", RegexOption.IGNORE_CASE)
 
 fun countWords(file: File): Int {
     return try {
-        val content = file.readText()
-        content.split(Regex("\\s+")).count { it.isNotEmpty() }
+        val allLines = file.readLines() // Read all lines, including empty ones
+
+        if (allLines.isEmpty()) {
+            return 0
+        }
+
+        val contentLines = allLines.toMutableList()
+
+        if (contentLines.isNotEmpty()) {
+            val firstLineTrimmed = contentLines.first().trim()
+            if (titlePattern.matches(firstLineTrimmed)) {
+                contentLines.removeAt(0) // Remove the identified title line
+            }
+        }
+
+        if (contentLines.isNotEmpty()) {
+            var lastNonBlankLineIndex = -1
+            for (i in contentLines.indices.reversed()) {
+                if (contentLines[i].isNotBlank()) {
+                    lastNonBlankLineIndex = i
+                    break
+                }
+            }
+
+            if (lastNonBlankLineIndex != -1) {
+                val potentialHashtagLine = contentLines[lastNonBlankLineIndex].trim()
+                if (potentialHashtagLine.startsWith("#")) {
+                    val subListToRemove = contentLines.subList(lastNonBlankLineIndex, contentLines.size)
+                    subListToRemove.clear()
+                }
+            }
+        }
+
+        if (contentLines.all { it.isBlank() }) {
+            return 0
+        }
+
+        val actualContent = contentLines.joinToString(separator = "\n")
+
+        return actualContent.split(Regex("\\s+")).count { it.isNotBlank() }
+
     } catch (e: Exception) {
+        e.printStackTrace()
         0
     }
 }
@@ -20,7 +61,6 @@ fun getRelativeTimeText(timestamp: Long): String {
     val now = Calendar.getInstance()
     val fileTime = Calendar.getInstance().apply { timeInMillis = timestamp }
 
-    // Fix: Calculate differences correctly
     val daysDiff = now.get(Calendar.DAY_OF_YEAR) - fileTime.get(Calendar.DAY_OF_YEAR)
     val yearsDiff = now.get(Calendar.YEAR) - fileTime.get(Calendar.YEAR)
 

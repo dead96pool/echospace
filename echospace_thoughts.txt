@@ -1,11 +1,12 @@
 basic functionality:
 - markdown parsing (heading basically for now)
-- file navigation buy clicking the slimtopbar
+- file navigation by clicking the slimtopbar
 - topbar dropdown or settings screen for theme/sorting options
 - corrected word count to remove the header and filetag
 
 
 future features:
+- app main icon something like a typewriter
 - file search icon
 - undo and redo working
 - cloud sync

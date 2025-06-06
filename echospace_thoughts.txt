@@ -1,8 +1,8 @@
 basic functionality:
 - markdown parsing (heading basically for now)
-- file navigation by clicking the slimtopbar
+- better slimtopbar spacing between the virtual folders | gaps around "/"
 - topbar dropdown or settings screen for theme/sorting options
-- corrected word count to remove the header and filetag
+
 
 
 future features:

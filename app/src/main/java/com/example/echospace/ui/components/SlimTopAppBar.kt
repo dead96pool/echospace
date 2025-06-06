@@ -39,7 +39,7 @@ fun SlimTopAppBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(51.dp) // Keep the slim height
-                .padding(horizontal = 15.dp, vertical = 8.dp),
+                .padding(horizontal = 8.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {

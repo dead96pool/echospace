@@ -6,10 +6,15 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 //import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,7 +23,8 @@ import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+//import androidx.compose.material.icons.filled.Home
+//import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LightMode
@@ -48,12 +54,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.example.echospace.R
 import com.example.echospace.data.repository.DiaryRepositoryImpl
 import com.example.echospace.domain.model.DiaryEntry
 import com.example.echospace.domain.repository.DiaryRepository
@@ -66,7 +76,12 @@ import com.example.echospace.ui.editor.EditorActivity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import android.app.Activity
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.ripple
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.draw.clip
 import com.example.echospace.domain.model.CreateFileResult
 import com.example.echospace.utils.SortPreferences
 import com.example.echospace.domain.repository.SortType
@@ -162,99 +177,222 @@ fun HomeScreen(diaryRepository: DiaryRepository,
         topBar = {
             SlimTopAppBar(
                 title = {
-                    Text(
-                        text = if (currentPath.isEmpty()) "EchoSpace" else currentPath.replace("#", " / "),
-                        style = MaterialTheme.typography.titleMedium // Use smaller text style
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Add spacer only when home icon is present
+                        if (currentPath.isNotEmpty()) {
+                            Spacer(modifier = Modifier.width(8.dp)) // Adjust width as needed
+                        }
+                        // Assuming currentPath internally uses "#" as separator, e.g., "DIARY#2025#JUN"
+                        val pathSegments =
+                            if (currentPath.isNotEmpty()) currentPath.split('#') else emptyList()
+
+                        if (pathSegments.isEmpty()) {
+                            // If at root, display "EchoSpace"
+                            Text(
+                                text = "EchoSpace",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                        } else {
+                            // If in a subfolder, display clickable breadcrumbs
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                pathSegments.forEachIndexed { index, segment ->
+                                    val isLastSegment = index == pathSegments.size - 1
+                                    Text(
+                                        text = segment, // This will now be "DIARY", then "2025", then "JUN"
+                                        style = MaterialTheme.typography.titleMedium,
+                                        // Dim the last segment slightly as it's not clickable or represents current location
+                                        color = if (isLastSegment) MaterialTheme.colorScheme.onSurface.copy(
+                                            alpha = 0.7f
+                                        )
+                                        else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier
+                                            .then(
+                                                if (!isLastSegment) { // Only add clickable if NOT the last segment
+                                                    Modifier.clickable {
+                                                        // Construct the path up to and including the clicked segment, using '#'
+                                                        val newPathToNavigate = pathSegments
+                                                            .take(index + 1)
+                                                            .joinToString("#")
+                                                        currentPath = newPathToNavigate
+                                                    }
+                                                } else {
+                                                    Modifier // No clickable modifier for the last segment
+                                                }
+                                            )
+                                            .padding(
+                                                horizontal = 0.dp,
+                                                vertical = 4.dp
+                                            ) // Adjusted padding for better touch
+                                    )
+                                    if (!isLastSegment) { // Don't add separator after the last segment
+                                        // Visual separator is " / "
+                                        Text(
+                                            text = " / ",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            //modifier = Modifier.padding(horizontal = 0.dp) // Padding for the separator
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 },
                 navigationIcon = {
                     if (currentPath.isNotEmpty()) {
-                        IconButton(onClick = {
-                            currentPath = diaryRepository.getParentPath(currentPath) ?: ""
-                        }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        val iconTint = if (isDarkTheme) Color(0xFFF0F0F0)
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp) // Standard touch target size
+                                .clip(RoundedCornerShape(10.dp)) // Circular ripple boundary
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = ripple(
+                                        bounded = true,
+                                        radius = 20.dp,
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                    )
+                                ){ currentPath = "" }
+                                .padding(1.dp) // This centers the 24dp icon within 48dp touch area
+                                .offset(y = (-1).dp), // Move icon left to align with text
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_google_home),
+                                contentDescription = "Home",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant, // Apply the same tint as folder/file icons
+                                modifier = Modifier.size(46.dp)
+                            )
                         }
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* TODO: Search */ }) {
-                        Icon(Icons.Default.Search, contentDescription = "Search")
-                    }
-                    IconButton(onClick = onThemeToggle) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(1.dp), // Exact spacing control
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Search icon
                         Icon(
-                            imageVector = if (isDarkTheme)
-                                Icons.Default.LightMode
-                            else
-                                Icons.Default.DarkMode,
-                            contentDescription = "Toggle Theme"
+                            Icons.Default.Search,
+                            contentDescription = "Search",
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(12.dp)) // Circular ripple boundary
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = ripple(
+                                        bounded = true,
+                                        //radius = 20.dp,
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                    )
+                                ){ /* TODO: Search */ }
+                                .padding(4.dp), // Minimal touch padding
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
-                    }
 
-                    Box {
-                        IconButton(onClick = { showSortMenu = true }) {
-                            Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort")
-                        }
+                        // Theme toggle icon
+                        Icon(
+                            imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = "Toggle Theme",
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(12.dp)) // Circular ripple boundary
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = ripple(
+                                        bounded = true,
+                                        //radius = 20.dp,
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                    )
+                                ){ onThemeToggle() }
+                                .padding(4.dp),
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
 
-                        DropdownMenu(
-                            expanded = showSortMenu,
-                            onDismissRequest = { showSortMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Name A-Z") },
-                                onClick = {
-                                    coroutineScope.launch {
-                                        sortPreferences.setSortType(SortType.NAME_ASC)
-                                    }
-                                    showSortMenu = false
-                                },
-                                leadingIcon = {
-                                    if (currentSortType == SortType.NAME_ASC) {
-                                        Icon(Icons.Default.Check, contentDescription = null)
-                                    }
-                                }
+                        Box {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Sort,
+                                contentDescription = "Sort",
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(12.dp)) // Circular ripple boundary
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = ripple(
+                                            bounded = true,
+                                            //radius = 20.dp,
+                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                        )
+                                    ){ showSortMenu = true }
+                                    .padding(4.dp),
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
-                            DropdownMenuItem(
-                                text = { Text("Name Z-A") },
-                                onClick = {
-                                    coroutineScope.launch {
-                                        sortPreferences.setSortType(SortType.NAME_DESC)
+
+                            DropdownMenu(
+                                expanded = showSortMenu,
+                                onDismissRequest = { showSortMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Name A-Z") },
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            sortPreferences.setSortType(SortType.NAME_ASC)
+                                        }
+                                        showSortMenu = false
+                                    },
+                                    leadingIcon = {
+                                        if (currentSortType == SortType.NAME_ASC) {
+                                            Icon(Icons.Default.Check, contentDescription = null)
+                                        }
                                     }
-                                    showSortMenu = false
-                                },
-                                leadingIcon = {
-                                    if (currentSortType == SortType.NAME_DESC) {
-                                        Icon(Icons.Default.Check, contentDescription = null)
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Name Z-A") },
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            sortPreferences.setSortType(SortType.NAME_DESC)
+                                        }
+                                        showSortMenu = false
+                                    },
+                                    leadingIcon = {
+                                        if (currentSortType == SortType.NAME_DESC) {
+                                            Icon(Icons.Default.Check, contentDescription = null)
+                                        }
                                     }
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Newest First") },
-                                onClick = {
-                                    coroutineScope.launch {
-                                        sortPreferences.setSortType(SortType.TIME_DESC)
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Newest First") },
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            sortPreferences.setSortType(SortType.TIME_DESC)
+                                        }
+                                        showSortMenu = false
+                                    },
+                                    leadingIcon = {
+                                        if (currentSortType == SortType.TIME_DESC) {
+                                            Icon(Icons.Default.Check, contentDescription = null)
+                                        }
                                     }
-                                    showSortMenu = false
-                                },
-                                leadingIcon = {
-                                    if (currentSortType == SortType.TIME_DESC) {
-                                        Icon(Icons.Default.Check, contentDescription = null)
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Oldest First") },
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            sortPreferences.setSortType(SortType.TIME_ASC)
+                                        }
+                                        showSortMenu = false
+                                    },
+                                    leadingIcon = {
+                                        if (currentSortType == SortType.TIME_ASC) {
+                                            Icon(Icons.Default.Check, contentDescription = null)
+                                        }
                                     }
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Oldest First") },
-                                onClick = {
-                                    coroutineScope.launch {
-                                        sortPreferences.setSortType(SortType.TIME_ASC)
-                                    }
-                                    showSortMenu = false
-                                },
-                                leadingIcon = {
-                                    if (currentSortType == SortType.TIME_ASC) {
-                                        Icon(Icons.Default.Check, contentDescription = null)
-                                    }
-                                }
-                            )
+                                )
+                            }
                         }
                     }
                 }

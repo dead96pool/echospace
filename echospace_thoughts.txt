@@ -1,13 +1,11 @@
 basic functionality:
 - markdown parsing (heading basically for now)
-- better slimtopbar spacing between the virtual folders | gaps around "/"
 - topbar dropdown or settings screen for theme/sorting options
 
 
 
 future features:
 - app main icon something like a typewriter
-- file search icon
 - undo and redo working
 - cloud sync
 - db to store the notes

@@ -29,4 +29,6 @@ interface DiaryRepository {
     fun createEntryWithCurrentDateResult(currentPath: String = ""): Pair<CreateFileResult, File?>
 
     fun getFolderContentsSorted(currentPath: String, sortType: SortType): List<FolderItem>
+
+    fun searchEntries(query: String, currentPath: String = ""): List<FolderItem>
 }

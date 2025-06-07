@@ -125,4 +125,31 @@ class DiaryRepositoryImpl(private val fileManager: FileManager) : DiaryRepositor
             )
         }
     }
+
+    override fun searchEntries(query: String, currentPath: String): List<FolderItem> {
+        if (query.isBlank()) return emptyList()
+
+        val allEntries = getAllEntries()
+        val matchingEntries = allEntries.filter { entry ->
+            // Search in file title (without extension)
+            entry.title.contains(query, ignoreCase = true) ||
+                    // Search in file content (including first line title and last line hashtags)
+                    try {
+                        entry.file.readText().contains(query, ignoreCase = true)
+                    } catch (e: Exception) {
+                        false
+                    }
+        }
+
+        // Convert matching entries to FolderItem format
+        return matchingEntries.map { entry ->
+            FolderItem(
+                name = entry.title,
+                path = "", // Search results don't need path navigation
+                isFolder = false,
+                entry = entry
+            )
+        }
+    }
+
 }

@@ -2,6 +2,7 @@ basic functionality:
 - markdown parsing (heading basically for now)
 - topbar dropdown or settings screen for theme/sorting options
 - better sorting dropdown menu UI
+- highlight text for editing maybe
 
 
 

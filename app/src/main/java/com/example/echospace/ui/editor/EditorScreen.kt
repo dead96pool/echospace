@@ -3,7 +3,7 @@ package com.example.echospace.ui.editor
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.interaction.MutableInteractionSource
+//import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
@@ -18,11 +18,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.ExperimentalMaterial3Api
+//import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextFieldDefaults
+//import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,18 +43,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+//import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.input.VisualTransformation
+//import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.echospace.data.repository.DiaryRepositoryImpl
 import com.example.echospace.domain.repository.DiaryRepository
+import com.example.echospace.utils.parseMarkdown
 import java.io.File
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+//@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EditorScreen(
     file: File,
@@ -249,7 +253,8 @@ fun EditorScreen(
                         textLayoutResult = layoutResult
                     },
                     textStyle = MaterialTheme.typography.bodyMedium.copy(
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = MaterialTheme.colorScheme.onBackground,
+                        lineHeight = 22.sp
                     ),
                     cursorBrush = SolidColor(
                         if (isDarkTheme) {
@@ -271,31 +276,7 @@ fun EditorScreen(
                                     bringCursorIntoViewWithBuffer()
                                 }
                             }
-                        },
-                    decorationBox = { innerTextField ->
-                        OutlinedTextFieldDefaults.DecorationBox(
-                            value = textFieldValue.text,
-                            innerTextField = innerTextField,
-                            enabled = true,
-                            singleLine = false,
-                            visualTransformation = VisualTransformation.None,
-                            interactionSource = remember { MutableInteractionSource() },
-                            label = { Text("Write your thoughts...") },
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                            ),
-                            contentPadding = OutlinedTextFieldDefaults.contentPadding(),
-                            container = {
-                                OutlinedTextFieldDefaults.Container(
-                                    enabled = true,
-                                    isError = false,
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    colors = OutlinedTextFieldDefaults.colors()
-                                )
-                            }
-                        )
-                    }
+                        }
                 )
             }
         } else {
@@ -307,12 +288,14 @@ fun EditorScreen(
                     .verticalScroll(scrollState) // Manual scroll for view mode only
             ) {
                 Text(
-                    text = textFieldValue.text,
+                    text = parseMarkdown(textFieldValue.text),
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(16.dp),
-                    color = MaterialTheme.colorScheme.onBackground,
-                    style = MaterialTheme.typography.bodyMedium
+                    //color = MaterialTheme.colorScheme.onBackground,
+                    style = MaterialTheme.typography.bodyMedium,
+                    lineHeight = 22.sp,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
         }

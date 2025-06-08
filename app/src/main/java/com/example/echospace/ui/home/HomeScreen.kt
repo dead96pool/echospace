@@ -188,7 +188,7 @@ fun HomeScreen(
         coroutineScope.launch {
             isRefreshing = true
             // Simulate refresh delay (you can remove this delay in production)
-            delay(1000)
+            delay(400)
             // Trigger refresh by incrementing the trigger
             refreshTrigger++
             isRefreshing = false
@@ -344,7 +344,7 @@ fun HomeScreen(
                                     ) {
                                         isSearchMode = true
                                     }
-                                    .padding(4.dp), // Minimal touch padding
+                                    .padding(6.dp), // Minimal touch padding
                                 tint = MaterialTheme.colorScheme.onSurface
                             )
 
@@ -363,7 +363,7 @@ fun HomeScreen(
                                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
                                         )
                                     ) { onThemeToggle() }
-                                    .padding(4.dp),
+                                    .padding(6.dp),
                                 tint = MaterialTheme.colorScheme.onSurface
                             )
 
@@ -383,7 +383,7 @@ fun HomeScreen(
                                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
                                             )
                                         ) { showSortMenu = true }
-                                        .padding(4.dp),
+                                        .padding(6.dp),
                                     tint = MaterialTheme.colorScheme.onSurface
                                 )
 

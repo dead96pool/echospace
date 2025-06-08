@@ -18,11 +18,13 @@ private val LightGrey = Color(0xFF757575)
 private val MediumGrey = Color(0xFF616161)
 private val VeryLightGrey = Color(0xFFF5F5F5)
 
+private val Headingcolor = Color(0xFF24a3e7)
+
 private val DarkColorScheme = darkColorScheme(
     //primary = Color(0xFFBB86FC),
     primary = VeryLightGrey,
     secondary = Color(0xFF03DAC6),
-    tertiary = Color(0xFF3700B3),
+    tertiary = Headingcolor,
     background = DarkGrey,
     surface = Color(0xFF2D2D2D),
     onBackground = Color.White,
@@ -37,7 +39,7 @@ private val LightColorScheme = lightColorScheme(
     //primary = Color(0xFF6200EE),
     primary = DarkGrey,
     secondary = Color(0xFF03DAC6),
-    tertiary = Color(0xFF3700B3),
+    tertiary = Headingcolor,
     background = Color.White,
     surface = VeryLightGrey,
     onBackground = Color.Black,

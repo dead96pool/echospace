@@ -3,6 +3,7 @@ basic functionality:
 - topbar dropdown or settings screen for theme/sorting options
 - better sorting dropdown menu UI
 - highlight text for editing maybe
+- change the font typeface
 
 
 
@@ -14,3 +15,5 @@ future features:
 - possible summary of the notes to include in the filelist screen
 - better colour consistencies between ui text, icons and buttons
 - better colour selection for heading like a colourwheel
+- more selection for typeface fonts
+- maybe change the formatstyle for the file hashtag in view mode

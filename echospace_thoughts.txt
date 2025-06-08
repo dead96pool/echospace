@@ -1,5 +1,5 @@
 basic functionality:
-- markdown parsing (heading basically for now)
+- better file management in Documents/Echospace folder for files
 - topbar dropdown or settings screen for theme/sorting options
 - better sorting dropdown menu UI
 - highlight text for editing maybe

@@ -50,10 +50,11 @@ import androidx.compose.ui.text.input.TextFieldValue
 //import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.documentfile.provider.DocumentFile
 import com.example.echospace.data.repository.DiaryRepositoryImpl
 import com.example.echospace.domain.repository.DiaryRepository
 import com.example.echospace.utils.parseMarkdown
-import java.io.File
+//import java.io.File
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -61,7 +62,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EditorScreen(
-    file: File,
+    file: DocumentFile,
     diaryRepository: DiaryRepository,
     startInEditMode: Boolean,
     isDarkTheme: Boolean,

@@ -3,111 +3,176 @@
 package com.example.echospace.data.local
 
 import android.content.Context
-import java.io.File
-import java.io.IOException
+import android.content.Intent
+import androidx.core.content.edit
+import android.net.Uri
+import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
+//import java.io.File
+//import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 class FileManager(private val context: Context) {
 
-    val rootDir: File by lazy {
-        File(context.filesDir, "EchoSpaceFiles").apply {
-            if (!exists()) {
-                mkdir()
-            }
+    companion object {
+        private const val PREF_FOLDER_URI = "echospace_folder_uri"
+    }
+
+    private val sharedPrefs = context.getSharedPreferences("echospace_prefs", Context.MODE_PRIVATE)
+
+    // Get the user-selected folder URI
+    private fun getFolderUri(): Uri? {
+        val uriString = sharedPrefs.getString(PREF_FOLDER_URI, null)
+        return uriString?.toUri()
+    }
+
+    // Save the selected folder URI
+    fun saveFolderUri(uri: Uri) {
+        context.contentResolver.takePersistableUriPermission(
+            uri,
+            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        )
+        sharedPrefs.edit {
+            putString(PREF_FOLDER_URI, uri.toString())
         }
     }
 
-    fun getAllFiles(): List<File> {
-        return rootDir.listFiles()
-            ?.filter { it.isFile && it.extension == "txt" }
-            ?.sortedByDescending { it.lastModified() }
-            ?: emptyList()
+    // Check if folder is selected
+    fun isFolderSelected(): Boolean = getFolderUri() != null
+
+    // Get all text files from the selected folder
+    fun getAllFiles(): List<DocumentFile> {
+        val folderUri = getFolderUri() ?: return emptyList()
+        val folder = DocumentFile.fromTreeUri(context, folderUri) ?: return emptyList()
+
+        return folder.listFiles()
+            .filter { it.isFile && it.name?.endsWith(".txt") == true }
+            .sortedByDescending { it.lastModified() }
     }
 
-    fun createFile(fileName: String, currentPath: String = ""): File? {
+    // Create file with given name
+    fun createFile(fileName: String, currentPath: String): DocumentFile? {
+        val folderUri = getFolderUri() ?: return null
+        val folder = DocumentFile.fromTreeUri(context, folderUri) ?: return null
+
+        val sanitizedName = sanitizeFileName(fileName)
+        val documentFile = folder.createFile("text/plain", "$sanitizedName.txt") ?: return null
+
+
+        // Add filename and time as first line of editable content
+        val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+        val currentTime = timeFormat.format(Date())
+            .uppercase()
+            .replace(".", "")
+        val firstLine = "# $sanitizedName  $currentTime\n\n"
+
+        // Add hashtag categorization based on current path
+        val content = if (currentPath.isNotEmpty()) {
+            val hashtagPath = "#${currentPath.replace("/", "#")}"
+            "$firstLine\n\n$hashtagPath"
+        } else {
+            firstLine
+        }
+
+        return if (writeToFile(documentFile, content)) documentFile else null
+    }
+
+    fun createFileWithCurrentDate(currentPath: String): DocumentFile? {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val fileName = dateFormat.format(Date())
+
+        val folderUri = getFolderUri() ?: return null
+        val folder = DocumentFile.fromTreeUri(context, folderUri) ?: return null
+
+        val documentFile = folder.createFile("text/plain", "$fileName.txt") ?: return null
+
+        // Add date and time as first line of editable content
+        val displayDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+        val currentDate = Date()
+        val displayDate = displayDateFormat.format(currentDate)
+        val displayTime = timeFormat.format(currentDate)
+            .uppercase()
+            .replace(".", "")
+        val firstLine = "# $displayDate  $displayTime\n\n"
+
+        // Add hashtag categorization based on current path
+        val content = if (currentPath.isNotEmpty()) {
+            val hashtagPath = "#${currentPath.replace("/", "#")}"
+            "$firstLine\n\n$hashtagPath"
+        } else {
+            firstLine
+        }
+
+        return if (writeToFile(documentFile, content)) documentFile else null
+    }
+
+    // Write content to file
+    private fun writeToFile(documentFile: DocumentFile, content: String): Boolean {
         return try {
-            val sanitizedName = sanitizeFileName(fileName)
-            val file = File(rootDir, "$sanitizedName.txt")
-
-            if (file.createNewFile()) {
-                // Add filename and time as first line of editable content
-                val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
-                val currentTime = timeFormat.format(Date())
-                                    .uppercase()
-                                    .replace(".", "")
-                val firstLine = "# $sanitizedName  $currentTime\n\n"
-
-                // Add hashtag categorization based on current path
-                val content = if (currentPath.isNotEmpty()) {
-                    val hashtagPath = "#${currentPath.replace("/", "#")}"
-                    "$firstLine\n\n$hashtagPath"
-                } else {
-                    firstLine
-                }
-
-                file.writeText(content)
-                file
-            } else {
-                null
+            context.contentResolver.openOutputStream(documentFile.uri)?.use { outputStream ->
+                outputStream.write(content.toByteArray())
             }
+            true
         } catch (e: Exception) {
-            null
+            false
         }
     }
 
-    fun createFileWithCurrentDate(currentPath: String = ""): File? {
+    // Read file content
+    fun readFileContent(documentFile: DocumentFile): String {
         return try {
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            val fileName = dateFormat.format(Date())
-            val file = File(rootDir, "$fileName.txt")
-
-            if (file.createNewFile()) {
-                // Add date and time as first line of editable content
-                val displayDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
-                val currentDate = Date()
-                val displayDate = displayDateFormat.format(currentDate)
-                val displayTime = timeFormat.format(currentDate)
-                                    .uppercase()
-                                    .replace(".", "")
-                val firstLine = "# $displayDate  $displayTime\n\n"
-
-                // Add hashtag categorization based on current path
-                val content = if (currentPath.isNotEmpty()) {
-                    val hashtagPath = "#${currentPath.replace("/", "#")}"
-                    "$firstLine\n\n$hashtagPath"
-                } else {
-                    firstLine
-                }
-
-                file.writeText(content)
-                file
-            } else {
-                null
-            }
+            context.contentResolver.openInputStream(documentFile.uri)?.use { inputStream ->
+                inputStream.readBytes().toString(Charsets.UTF_8)
+            } ?: ""
         } catch (e: Exception) {
-            null
-        }
-    }
-
-    fun readFileContent(file: File): String {
-        return try {
-            file.readText()
-        } catch (e: IOException) {
-            e.printStackTrace()
             ""
         }
     }
 
-    fun writeFileContent(file: File, content: String): Boolean {
-        return try {
-            file.writeText(content)
-            true
-        } catch (e: IOException) {
-            e.printStackTrace()
-            false
+    // Write file content
+    fun writeFileContent(documentFile: DocumentFile, content: String): Boolean {
+        return writeToFile(documentFile, content)
+    }
+
+    // Delete file
+    fun deleteFile(documentFile: DocumentFile): Boolean {
+        return documentFile.delete()
+    }
+
+    // Add this function to your FileManager.kt
+    fun fileExistsWithName(fileName: String): Boolean {
+        val folderUri = getFolderUri() ?: return false
+        val folder = DocumentFile.fromTreeUri(context, folderUri) ?: return false
+        val sanitizedName = sanitizeFileName(fileName)
+
+        return folder.listFiles().any {
+            it.name == "$sanitizedName.txt"
+        }
+    }
+
+    // Rename file
+    fun renameFile(documentFile: DocumentFile, newName: String): Boolean {
+        val sanitizedName = sanitizeFileName(newName)
+
+        // Check if a file with the new name already exists
+        if (fileExistsWithName(sanitizedName)) {
+            return false // Return false to indicate failure due to existing file
+        }
+
+        return documentFile.renameTo("$sanitizedName.txt")
+    }
+
+    // Check if file exists
+    fun fileExists(fileName: String): Boolean {
+        val folderUri = getFolderUri() ?: return false
+        val folder = DocumentFile.fromTreeUri(context, folderUri) ?: return false
+        val sanitizedName = sanitizeFileName(fileName)
+
+        return folder.listFiles().any {
+            it.name == "$sanitizedName.txt"
         }
     }
 
@@ -115,35 +180,4 @@ class FileManager(private val context: Context) {
         // Remove invalid file name characters
         return fileName.replace(Regex("[\\\\/:*?\"<>|]"), "_")
     }
-
-    fun renameFile(file: File, newName: String): Boolean {
-        val sanitizedName = sanitizeFileName(newName)
-        val newFile = File(file.parentFile, "$sanitizedName.txt")
-
-        return try {
-            if (newFile.exists()) {
-                return false // Don't overwrite existing files
-            }
-            file.renameTo(newFile)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
-        }
-    }
-
-    fun deleteFile(file: File): Boolean {
-        return try {
-            file.delete()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
-        }
-    }
-
-    fun fileExists(fileName: String): Boolean {
-        val sanitizedName = sanitizeFileName(fileName)
-        val file = File(rootDir, "$sanitizedName.txt")
-        return file.exists()
-    }
-
 }

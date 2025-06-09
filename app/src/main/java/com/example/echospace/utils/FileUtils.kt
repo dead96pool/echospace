@@ -1,6 +1,8 @@
 package com.example.echospace.utils
 
-import java.io.File
+import android.content.Context
+//import java.io.File
+import androidx.documentfile.provider.DocumentFile
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -8,16 +10,18 @@ import java.util.Calendar
 
 private val titlePattern = Regex("^#\\s.+?\\s\\d{1,2}:\\d{2}\\s(?:AM|PM)$", RegexOption.IGNORE_CASE)
 
-fun countWords(file: File): Int {
+fun countWords(documentFile: DocumentFile, context: Context): Int {
     return try {
-        val allLines = file.readLines() // Read all lines, including empty ones
+        val content = context.contentResolver.openInputStream(documentFile.uri)?.use { inputStream ->
+            inputStream.readBytes().toString(Charsets.UTF_8)
+        } ?: ""
 
-        if (allLines.isEmpty()) {
-            return 0
-        }
+        val allLines = content.lines()
+        if (allLines.isEmpty()) return 0
 
         val contentLines = allLines.toMutableList()
 
+        // Remove title line if present
         if (contentLines.isNotEmpty()) {
             val firstLineTrimmed = contentLines.first().trim()
             if (titlePattern.matches(firstLineTrimmed)) {
@@ -25,6 +29,7 @@ fun countWords(file: File): Int {
             }
         }
 
+        // Remove hashtag lines at end
         if (contentLines.isNotEmpty()) {
             var lastNonBlankLineIndex = -1
             for (i in contentLines.indices.reversed()) {

@@ -1,5 +1,6 @@
 basic functionality:
 - better file management in Documents/Echospace folder for files
+- renaming the name to existing filename
 - topbar dropdown or settings screen for theme/sorting options
 - better sorting dropdown menu UI
 - highlight text for editing maybe
@@ -19,3 +20,10 @@ future features:
 - better colour selection for heading like a colourwheel
 - more selection for typeface fonts
 - maybe change the formatstyle for the file hashtag in view mode
+
+
+
+
+code function not being used:
+- virtualfolder class
+- fromFile in diaryentry

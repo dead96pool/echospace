@@ -512,7 +512,7 @@ fun HomeScreen(
                             } else {
                                 folderItem.entry?.let { entry ->
                                     val intent = Intent(context, EditorActivity::class.java).apply {
-                                        putExtra("file_path", entry.file.absolutePath)
+                                        putExtra("file_uri", entry.file.uri.toString())
                                         putExtra("current_path", if (isSearchMode) "" else currentPath) // Pass current path
                                     }
                                     launcher.launch(intent) // Use launcher instead of startActivity
@@ -558,7 +558,7 @@ fun HomeScreen(
                         CreateFileResult.SUCCESS -> {
                             file?.let {
                                 val intent = Intent(context, EditorActivity::class.java).apply {
-                                    putExtra("file_path", it.absolutePath)
+                                    putExtra("file_uri", it.uri.toString())
                                     putExtra("edit_mode", true)
                                     putExtra("current_path", currentPath)
                                 }
@@ -589,12 +589,21 @@ fun HomeScreen(
                 entry = entry,
                 onDismiss = { entryToRename = null },
                 onRename = { e, newName ->
-                    if (diaryRepository.renameEntry(e.file, newName)) {
-                        Toast.makeText(context, "Entry renamed", Toast.LENGTH_SHORT).show()
-                        refreshTrigger++
-                    } else {
-                        Toast.makeText(context, "Failed to rename entry", Toast.LENGTH_SHORT).show()
+                    val result = (diaryRepository as DiaryRepositoryImpl).renameEntryWithResult(e.file, newName)
+                    when (result) {
+                        CreateFileResult.SUCCESS -> {
+                            Toast.makeText(context, "Entry renamed", Toast.LENGTH_SHORT).show()
+                            refreshTrigger++
+                            entryToRename = null
+                        }
+                        CreateFileResult.FILENAME_EXISTS -> {
+                            // Error will be handled by the dialog
+                        }
+                        CreateFileResult.OTHER_ERROR -> {
+                            Toast.makeText(context, "Failed to rename entry", Toast.LENGTH_SHORT).show()
+                        }
                     }
+                    result // Return the result to the dialog
                 }
             )
         }

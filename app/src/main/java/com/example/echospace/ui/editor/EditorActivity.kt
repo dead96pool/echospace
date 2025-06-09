@@ -1,6 +1,8 @@
 package com.example.echospace.ui.editor
 
 import android.content.Intent
+//import android.net.Uri
+import androidx.core.net.toUri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -13,13 +15,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.lifecycleScope
 import com.example.echospace.data.local.FileManager
 import com.example.echospace.data.repository.DiaryRepositoryImpl
 import com.example.echospace.ui.theme.EchoSpaceTheme
 import com.example.echospace.utils.ThemePreferences
 import kotlinx.coroutines.launch
-import java.io.File
+//import java.io.File
 
 class EditorActivity : ComponentActivity() {
     private lateinit var themePreferences: ThemePreferences
@@ -36,16 +39,22 @@ class EditorActivity : ComponentActivity() {
 
         themePreferences = ThemePreferences(this)
 
-        val filePath = intent.getStringExtra("file_path") ?: ""
+        val fileUriString = intent.getStringExtra("file_uri") ?: ""
         val startInEditMode = intent.getBooleanExtra("edit_mode", false)
         val currentPath = intent.getStringExtra("current_path") ?: ""
 
-        if (filePath.isEmpty()) {
+        if (fileUriString.isEmpty()) {
             finish()
             return
         }
 
-        val file = File(filePath)
+        val fileUri = fileUriString.toUri()
+        val documentFile = DocumentFile.fromSingleUri(this, fileUri)
+
+        if (documentFile == null) {
+            finish()
+            return
+        }
 
 
         // Initialize repository
@@ -71,7 +80,7 @@ class EditorActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     EditorScreen(
-                        file = file,
+                        file = documentFile,
                         diaryRepository = diaryRepository,
                         startInEditMode = startInEditMode,
                         isDarkTheme = isDarkTheme,

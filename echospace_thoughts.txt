@@ -3,8 +3,10 @@ basic functionality:
 - topbar dropdown or settings screen for theme/sorting options
 - better sorting dropdown menu UI
 - highlight text for editing maybe
+- hardware support for keyboard
+- double and single quote support
 - change the font typeface
-
+- better search result maybe with the virtual folder path
 
 
 future features:

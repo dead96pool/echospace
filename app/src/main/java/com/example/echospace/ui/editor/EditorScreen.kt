@@ -54,9 +54,11 @@ import androidx.documentfile.provider.DocumentFile
 import com.example.echospace.data.repository.DiaryRepositoryImpl
 import com.example.echospace.domain.repository.DiaryRepository
 import com.example.echospace.utils.parseMarkdown
+import kotlinx.coroutines.Dispatchers
 //import java.io.File
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 //@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @OptIn(ExperimentalFoundationApi::class)
@@ -186,27 +188,44 @@ fun EditorScreen(
 
     // Save on system back while editing
     BackHandler(enabled = isEditMode) {
-        if (diaryRepository.writeEntryContent(file, textFieldValue.text)) {
-            Toast.makeText(context, "Saved", Toast.LENGTH_SHORT).show()
+        // Use coroutine to prevent blocking UI
+        coroutineScope.launch {
+            // Save in background
+            val saveSuccess = withContext(Dispatchers.IO) {
+                diaryRepository.writeEntryContent(file, textFieldValue.text)
+            }
 
-            coroutineScope.launch {
-                delay(100)
+            if (saveSuccess) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Saved", Toast.LENGTH_SHORT).show()
+                }
 
+                // Check folder navigation in background
                 if (currentPath.isNotEmpty()) {
-                    val updatedContents = diaryRepository.getFolderContents(currentPath)
+                    val updatedContents = withContext(Dispatchers.IO) {
+                        diaryRepository.getFolderContents(currentPath)
+                    }
 
                     if (updatedContents.isEmpty()) {
-                        val nearestParent = (diaryRepository as DiaryRepositoryImpl)
-                            .findNearestParentWithContent(currentPath)
-                        onPathChanged(nearestParent)
+                        val nearestParent = withContext(Dispatchers.IO) {
+                            (diaryRepository as DiaryRepositoryImpl)
+                                .findNearestParentWithContent(currentPath)
+                        }
+                        withContext(Dispatchers.Main) {
+                            onPathChanged(nearestParent)
+                        }
                     }
                 }
 
-                isEditMode = false
-                onNavigateUp()
+                withContext(Dispatchers.Main) {
+                    isEditMode = false
+                    onNavigateUp()
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    onNavigateUp()
+                }
             }
-        } else {
-            onNavigateUp()
         }
     }
 

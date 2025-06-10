@@ -19,15 +19,21 @@ class DiaryRepositoryImpl(private val fileManager: FileManager) : DiaryRepositor
     private val virtualFolderManager = VirtualFolderManager()
 
     override fun getAllEntries(): List<DiaryEntry> {
-        return fileManager.getAllFiles().map { documentFile ->
-            // Convert DocumentFile to DiaryEntry
+        return fileManager.getAllFilesWithMetadata().map { metadata ->
             DiaryEntry(
-                file = documentFile, // You'll need to update DiaryEntry to accept DocumentFile
-                title = documentFile.name?.removeSuffix(".txt") ?: "Untitled",
-                lastModified = documentFile.lastModified(),
-                tags = parseTagsFromDocumentFile(documentFile)
+                file = metadata.documentFile,
+                title = metadata.title,
+                lastModified = metadata.lastModified,
+                tags = metadata.tags
             )
         }
+    }
+
+    // Get cached word count for a specific file
+    fun getWordCount(documentFile: DocumentFile): Int {
+        return fileManager.getAllFilesWithMetadata()
+            .find { it.documentFile.uri == documentFile.uri }
+            ?.wordCount ?: 0
     }
 
     private fun parseTagsFromDocumentFile(documentFile: DocumentFile): List<String> {
@@ -73,7 +79,7 @@ class DiaryRepositoryImpl(private val fileManager: FileManager) : DiaryRepositor
     // Add this function to your DiaryRepositoryImpl.kt
     fun renameEntryWithResult(file: DocumentFile, newName: String): CreateFileResult {
         // Check if file with new name already exists
-        if (fileManager.fileExistsWithName(newName)) {
+        if (fileManager.fileExists(newName)) {
             return CreateFileResult.FILENAME_EXISTS
         }
 

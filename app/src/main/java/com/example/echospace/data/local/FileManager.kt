@@ -14,6 +14,14 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+data class FileMetadata(
+    val documentFile: DocumentFile,
+    val title: String,
+    val lastModified: Long,
+    val wordCount: Int,
+    val tags: List<String>
+)
+
 class FileManager(private val context: Context) {
 
     companion object {
@@ -21,6 +29,15 @@ class FileManager(private val context: Context) {
     }
 
     private val sharedPrefs = context.getSharedPreferences("echospace_prefs", Context.MODE_PRIVATE)
+
+    // Cache for file metadata
+    private var cachedMetadata: List<FileMetadata>? = null
+    private var lastCacheTime: Long = 0
+    private val cacheValidityMs = 5000L // 5 seconds cache validity
+
+    // Add flag to prevent unnecessary cache refreshes
+    private var isCacheRefreshing = false
+
 
     // Get the user-selected folder URI
     private fun getFolderUri(): Uri? {
@@ -42,14 +59,117 @@ class FileManager(private val context: Context) {
     // Check if folder is selected
     fun isFolderSelected(): Boolean = getFolderUri() != null
 
-    // Get all text files from the selected folder
-    fun getAllFiles(): List<DocumentFile> {
-        val folderUri = getFolderUri() ?: return emptyList()
-        val folder = DocumentFile.fromTreeUri(context, folderUri) ?: return emptyList()
+    // Get all files with cached metadata for performance
+    fun getAllFilesWithMetadata(): List<FileMetadata> {
+        val currentTime = System.currentTimeMillis()
 
-        return folder.listFiles()
-            .filter { it.isFile && it.name?.endsWith(".txt") == true }
-            .sortedByDescending { it.lastModified() }
+        // Return cached data if still valid or already refreshing
+        if ((cachedMetadata != null && (currentTime - lastCacheTime) < cacheValidityMs) || isCacheRefreshing) {
+            return cachedMetadata ?: emptyList()
+        }
+
+        // Prevent concurrent cache refreshes
+        isCacheRefreshing = true
+
+        try {
+            // Your existing cache refresh logic...
+            val folderUri = getFolderUri() ?: return emptyList()
+            val folder = DocumentFile.fromTreeUri(context, folderUri) ?: return emptyList()
+
+            cachedMetadata = folder.listFiles()
+                .filter { it.isFile && it.name?.endsWith(".txt") == true }
+                .map { documentFile ->
+                    val content = readFileContent(documentFile)
+                    FileMetadata(
+                        documentFile = documentFile,
+                        title = documentFile.name?.removeSuffix(".txt") ?: "Untitled",
+                        lastModified = documentFile.lastModified(),
+                        wordCount = countWordsFromContent(content),
+                        tags = parseTagsFromContent(content)
+                    )
+                }
+                .sortedByDescending { it.lastModified }
+
+            lastCacheTime = currentTime
+            return cachedMetadata!!
+        } finally {
+            isCacheRefreshing = false
+        }
+    }
+
+
+    // Legacy function for compatibility - now uses cached metadata
+    fun getAllFiles(): List<DocumentFile> {
+        return getAllFilesWithMetadata().map { it.documentFile }
+    }
+
+    // Invalidate cache when files change
+    fun invalidateCache() {
+        cachedMetadata = null
+    }
+
+    // Optimized word counting from content (avoids re-reading file)
+    private fun countWordsFromContent(content: String): Int {
+        return try {
+            val allLines = content.lines()
+            if (allLines.isEmpty()) return 0
+
+            val contentLines = allLines.toMutableList()
+
+            // Remove title line if present (same logic as FileUtils)
+            if (contentLines.isNotEmpty()) {
+                val firstLineTrimmed = contentLines.first().trim()
+                val titlePattern = Regex("""^#\s+.+\s+\d{1,2}:\d{2}\s+(AM|PM)$""", RegexOption.IGNORE_CASE)
+                if (titlePattern.matches(firstLineTrimmed)) {
+                    contentLines.removeAt(0)
+                }
+            }
+
+            // Remove hashtag lines at end (same logic as FileUtils)
+            if (contentLines.isNotEmpty()) {
+                var lastNonBlankLineIndex = -1
+                for (i in contentLines.indices.reversed()) {
+                    if (contentLines[i].isNotBlank()) {
+                        lastNonBlankLineIndex = i
+                        break
+                    }
+                }
+
+                if (lastNonBlankLineIndex != -1) {
+                    val potentialHashtagLine = contentLines[lastNonBlankLineIndex].trim()
+                    if (potentialHashtagLine.startsWith("#")) {
+                        val subListToRemove = contentLines.subList(lastNonBlankLineIndex, contentLines.size)
+                        subListToRemove.clear()
+                    }
+                }
+            }
+
+            if (contentLines.all { it.isBlank() }) return 0
+
+            val actualContent = contentLines.joinToString(separator = " ")
+            return actualContent.split(Regex("\\s+")).count { it.isNotBlank() }
+        } catch (e: Exception) {
+            0
+        }
+    }
+
+    // Parse tags from content (avoids re-reading file)
+    private fun parseTagsFromContent(content: String): List<String> {
+        return try {
+            val lines = content.lines().filter { it.isNotBlank() }
+            if (lines.isEmpty()) return emptyList()
+
+            val lastLine = lines.last().trim()
+            if (lastLine.startsWith("#")) {
+                lastLine.split(" ")
+                    .filter { it.startsWith("#") && it.length > 1 }
+                    .map { it.substring(1) }
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
     // Create file with given name
@@ -76,7 +196,11 @@ class FileManager(private val context: Context) {
             firstLine
         }
 
-        return if (writeToFile(documentFile, content)) documentFile else null
+        val success = writeToFile(documentFile, content)
+        if (success) {
+            invalidateCache() // Invalidate cache after creating
+        }
+        return if (success) documentFile else null
     }
 
     fun createFileWithCurrentDate(currentPath: String): DocumentFile? {
@@ -106,7 +230,11 @@ class FileManager(private val context: Context) {
             firstLine
         }
 
-        return if (writeToFile(documentFile, content)) documentFile else null
+        val success = writeToFile(documentFile, content)
+        if (success) {
+            invalidateCache() // Invalidate cache after creating
+        }
+        return if (success) documentFile else null
     }
 
     // Write content to file
@@ -134,35 +262,37 @@ class FileManager(private val context: Context) {
 
     // Write file content
     fun writeFileContent(documentFile: DocumentFile, content: String): Boolean {
-        return writeToFile(documentFile, content)
+        val success = writeToFile(documentFile, content)
+        if (success) {
+            invalidateCache() // Invalidate cache after writing
+        }
+        return success
     }
 
     // Delete file
     fun deleteFile(documentFile: DocumentFile): Boolean {
-        return documentFile.delete()
-    }
-
-    // Add this function to your FileManager.kt
-    fun fileExistsWithName(fileName: String): Boolean {
-        val folderUri = getFolderUri() ?: return false
-        val folder = DocumentFile.fromTreeUri(context, folderUri) ?: return false
-        val sanitizedName = sanitizeFileName(fileName)
-
-        return folder.listFiles().any {
-            it.name == "$sanitizedName.txt"
+        val success = documentFile.delete()
+        if (success) {
+            invalidateCache() // Invalidate cache after deleting
         }
+        return success
     }
+
 
     // Rename file
     fun renameFile(documentFile: DocumentFile, newName: String): Boolean {
         val sanitizedName = sanitizeFileName(newName)
 
         // Check if a file with the new name already exists
-        if (fileExistsWithName(sanitizedName)) {
+        if (fileExists(sanitizedName)) {
             return false // Return false to indicate failure due to existing file
         }
 
-        return documentFile.renameTo("$sanitizedName.txt")
+        val success = documentFile.renameTo("$sanitizedName.txt")
+        if (success) {
+            invalidateCache() // Invalidate cache after renaming
+        }
+        return success
     }
 
     // Check if file exists

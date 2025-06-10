@@ -1,66 +1,10 @@
 package com.example.echospace.utils
 
-import android.content.Context
 //import java.io.File
-import androidx.documentfile.provider.DocumentFile
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.Calendar
-
-private val titlePattern = Regex("^#\\s.+?\\s\\d{1,2}:\\d{2}\\s(?:AM|PM)$", RegexOption.IGNORE_CASE)
-
-fun countWords(documentFile: DocumentFile, context: Context): Int {
-    return try {
-        val content = context.contentResolver.openInputStream(documentFile.uri)?.use { inputStream ->
-            inputStream.readBytes().toString(Charsets.UTF_8)
-        } ?: ""
-
-        val allLines = content.lines()
-        if (allLines.isEmpty()) return 0
-
-        val contentLines = allLines.toMutableList()
-
-        // Remove title line if present
-        if (contentLines.isNotEmpty()) {
-            val firstLineTrimmed = contentLines.first().trim()
-            if (titlePattern.matches(firstLineTrimmed)) {
-                contentLines.removeAt(0) // Remove the identified title line
-            }
-        }
-
-        // Remove hashtag lines at end
-        if (contentLines.isNotEmpty()) {
-            var lastNonBlankLineIndex = -1
-            for (i in contentLines.indices.reversed()) {
-                if (contentLines[i].isNotBlank()) {
-                    lastNonBlankLineIndex = i
-                    break
-                }
-            }
-
-            if (lastNonBlankLineIndex != -1) {
-                val potentialHashtagLine = contentLines[lastNonBlankLineIndex].trim()
-                if (potentialHashtagLine.startsWith("#")) {
-                    val subListToRemove = contentLines.subList(lastNonBlankLineIndex, contentLines.size)
-                    subListToRemove.clear()
-                }
-            }
-        }
-
-        if (contentLines.all { it.isBlank() }) {
-            return 0
-        }
-
-        val actualContent = contentLines.joinToString(separator = "\n")
-
-        return actualContent.split(Regex("\\s+")).count { it.isNotBlank() }
-
-    } catch (e: Exception) {
-        e.printStackTrace()
-        0
-    }
-}
 
 fun getRelativeTimeText(timestamp: Long): String {
     val now = Calendar.getInstance()

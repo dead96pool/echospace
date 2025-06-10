@@ -494,18 +494,37 @@ fun HomeScreen(
                     }
                 )
         ) {
+            val itemsToShow by remember(folderContents, searchResults, isSearchMode) {
+                derivedStateOf {
+                    if (isSearchMode) searchResults else folderContents
+                }
+            }
+
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background)
             ) {
-                // Show search results or normal folder contents
-                val itemsToShow = if (isSearchMode) searchResults else folderContents
-
-                items(itemsToShow) { folderItem ->
+                items(
+                    items = itemsToShow,
+                    key = { folderItem ->
+                        // Use a unique key for each item
+                        if (folderItem.isFolder) {
+                            "folder_${folderItem.path}_${folderItem.name}"
+                        } else {
+                            "file_${folderItem.entry?.file?.uri?.toString() ?: folderItem.name}"
+                        }
+                    }
+                ) { folderItem ->
+                    val wordCount = if (!folderItem.isFolder && folderItem.entry != null) {
+                        (diaryRepository as DiaryRepositoryImpl).getWordCount(folderItem.entry.file)
+                    } else {
+                        0
+                    }
                     FolderItemComponent(
                         item = folderItem,
                         isDarkTheme = isDarkTheme,
+                        wordCount = wordCount,
                         onClick = {
                             if (folderItem.isFolder && !isSearchMode) {
                                 currentPath = folderItem.path

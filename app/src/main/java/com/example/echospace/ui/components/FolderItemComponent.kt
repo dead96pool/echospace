@@ -34,14 +34,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.echospace.domain.model.FolderItem
-import com.example.echospace.utils.countWords
 import com.example.echospace.utils.getRelativeTimeText
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FolderItemComponent(
     item: FolderItem,
-    isDarkTheme: Boolean, // Add this parameter
+    isDarkTheme: Boolean,
+    wordCount: Int = 0,
     onClick: () -> Unit,
     onRename: ((FolderItem) -> Unit)? = null,
     onDelete: ((FolderItem) -> Unit)? = null
@@ -95,7 +95,7 @@ fun FolderItemComponent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "${countWords(item.entry.file, context)} words",
+                        text = "$wordCount words",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

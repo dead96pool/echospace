@@ -30,7 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+//import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.echospace.domain.model.FolderItem
@@ -46,7 +46,6 @@ fun FolderItemComponent(
     onRename: ((FolderItem) -> Unit)? = null,
     onDelete: ((FolderItem) -> Unit)? = null
 ) {
-    val context = LocalContext.current
 
     // Updated icon colors - very light grey for dark mode
     val iconTint = if (isDarkTheme) {

@@ -97,14 +97,8 @@ class FileManager(private val context: Context) {
         }
     }
 
-
-    // Legacy function for compatibility - now uses cached metadata
-    fun getAllFiles(): List<DocumentFile> {
-        return getAllFilesWithMetadata().map { it.documentFile }
-    }
-
     // Invalidate cache when files change
-    fun invalidateCache() {
+    private fun invalidateCache() {
         cachedMetadata = null
     }
 

@@ -36,26 +36,6 @@ class DiaryRepositoryImpl(private val fileManager: FileManager) : DiaryRepositor
             ?.wordCount ?: 0
     }
 
-    private fun parseTagsFromDocumentFile(documentFile: DocumentFile): List<String> {
-        return try {
-            val content = fileManager.readFileContent(documentFile)
-            val lines = content.lines().filter { it.isNotBlank() }
-            if (lines.isEmpty()) return emptyList()
-
-            val lastLine = lines.last().trim()
-            if (lastLine.startsWith("#")) {
-                lastLine.split(" ")
-                    .filter { it.startsWith("#") && it.length > 1 }
-                    .map { it.substring(1) } // Remove the # prefix
-            } else {
-                emptyList()
-            }
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
-
-
     override fun createEntry(fileName: String, currentPath: String): DocumentFile? {
         return fileManager.createFile(fileName, currentPath)
     }

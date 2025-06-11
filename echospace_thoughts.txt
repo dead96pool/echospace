@@ -1,6 +1,7 @@
 basic functionality:
-- better file management in Documents/Echospace folder for files
-- renaming the name to existing filename
+- fix rotation causing the create new file dialog close, exising out of editing mode and removing the files from the homescreen
+- being able to highlight and copy in the view only mode but not edit
+- limit the cache to not overfil the internal storage
 - topbar dropdown or settings screen for theme/sorting options
 - better sorting dropdown menu UI
 - highlight text for editing maybe
@@ -8,6 +9,13 @@ basic functionality:
 - double and single quote support
 - change the font typeface
 - better search result maybe with the virtual folder path
+- last modified should change if file edited outside the app
+- search can be non sequential just looking for keywords / better content search algorithm 
+- content or title hashmaps for better search optimisation
+- option for private folder (using the # folder tag maybe)
+- UI for folder classification apart from the hashtags
+- maybe import markdown libraries to have a better parser
+
 
 
 future features:
@@ -20,10 +28,7 @@ future features:
 - better colour selection for heading like a colourwheel
 - more selection for typeface fonts
 - maybe change the formatstyle for the file hashtag in view mode
-
-
-
-
-code function not being used:
-- virtualfolder class
-- fromFile in diaryentry
+- speech to text
+- AI summary to search for long forgotten notes
+- setting reminders as alarms for certain notes
+- being able to set custom folder colours

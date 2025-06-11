@@ -56,7 +56,7 @@ class MainActivity : ComponentActivity() {
     private fun showFolderSelectionDialog() {
         AlertDialog.Builder(this)
             .setTitle("Select EchoSpace Folder")
-            .setMessage("Please select where you want to store your diary files. We recommend creating an 'EchoSpace' folder in Documents.")
+            .setMessage("Please select where you want to store your diary files.")
             .setPositiveButton("Select Folder") { _, _ ->
                 folderPickerLauncher.launch(null)
             }
@@ -66,8 +66,10 @@ class MainActivity : ComponentActivity() {
 
     private fun initializeApp() {
 
+        //val fileManager = FileManager(this)
         // Initialize repository
         val diaryRepository = DiaryRepositoryImpl(fileManager)
+
 
         setContent {
             // Collect theme state from preferences (defaults to light theme)

@@ -1,12 +1,61 @@
 // utils/VirtualFolderManager.kt
 package com.example.echospace.utils
 
+import androidx.compose.runtime.Stable
 import com.example.echospace.domain.model.DiaryEntry
 import com.example.echospace.domain.model.FolderItem
 
+@Stable
 class VirtualFolderManager {
+    // Cache for computed folder contents
+    private var cachedContents: Map<String, List<FolderItem>> = emptyMap()
+    private var lastEntriesHash: Int = 0
 
     fun getFolderContents(
+        entries: List<DiaryEntry>,
+        currentPath: String
+    ): List<FolderItem> {
+        val entriesHash = entries.hashCode()
+
+        // Return cached result if entries haven't changed
+        if (entriesHash == lastEntriesHash && cachedContents.containsKey(currentPath)) {
+            return cachedContents[currentPath] ?: emptyList()
+        }
+
+        // Recompute only if entries changed
+        if (entriesHash != lastEntriesHash) {
+            cachedContents = computeAllFolderContents(entries)
+            lastEntriesHash = entriesHash
+        }
+
+        return cachedContents[currentPath] ?: emptyList()
+    }
+
+    private fun computeAllFolderContents(entries: List<DiaryEntry>): Map<String, List<FolderItem>> {
+        val result = mutableMapOf<String, List<FolderItem>>()
+
+        // Pre-compute all possible paths
+        val allPaths = mutableSetOf<String>()
+        allPaths.add("") // Root path
+
+        entries.forEach { entry ->
+            entry.tags.forEach { tagPath ->
+                val parts = tagPath.split("#")
+                for (i in 1..parts.size) {
+                    allPaths.add(parts.take(i).joinToString("#"))
+                }
+            }
+        }
+
+        // Compute contents for each path
+        allPaths.forEach { path ->
+            result[path] = computeFolderContentsForPath(entries, path)
+        }
+
+        return result
+    }
+
+    private fun computeFolderContentsForPath(
         entries: List<DiaryEntry>,
         currentPath: String
     ): List<FolderItem> {
@@ -69,7 +118,6 @@ class VirtualFolderManager {
         return if (parts.size == 1) "" else parts.dropLast(1).joinToString("#")
     }
 
-
     fun findNearestParentWithContent(
         currentPath: String,
         entries: List<DiaryEntry>
@@ -106,5 +154,11 @@ class VirtualFolderManager {
                         tagParts.take(pathParts.size) == pathParts
             }
         }
+    }
+
+    // Optional: Clear cache manually if needed
+    fun clearCache() {
+        cachedContents = emptyMap()
+        lastEntriesHash = 0
     }
 }

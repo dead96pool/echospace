@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.content.edit
 import android.net.Uri
+import androidx.compose.runtime.Stable
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 //import java.io.File
@@ -13,7 +14,10 @@ import androidx.documentfile.provider.DocumentFile
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+//import kotlinx.coroutines.Dispatchers
+//import kotlinx.coroutines.withContext
 
+@Stable
 data class FileMetadata(
     val documentFile: DocumentFile,
     val title: String,
@@ -22,20 +26,30 @@ data class FileMetadata(
     val tags: List<String>
 )
 
+// Add new cache structure for per-file tracking
+data class FileCache(
+    val uri: String,
+    val lastModified: Long,
+    val metadata: FileMetadata,
+    val cacheTimestamp: Long = System.currentTimeMillis()
+)
+
 class FileManager(private val context: Context) {
 
     companion object {
         private const val PREF_FOLDER_URI = "echospace_folder_uri"
+        private const val MAX_CACHE_SIZE = 500 // Limit cache size
+        private const val CACHE_CLEANUP_THRESHOLD = 600
+        private const val CACHE_EXPIRY_HOURS = 24
     }
 
     private val sharedPrefs = context.getSharedPreferences("echospace_prefs", Context.MODE_PRIVATE)
 
-    // Cache for file metadata
-    private var cachedMetadata: List<FileMetadata>? = null
-    private var lastCacheTime: Long = 0
-    private val cacheValidityMs = 5000L // 5 seconds cache validity
 
-    // Add flag to prevent unnecessary cache refreshes
+    // Replace List cache with Map for per-file caching
+    private var fileCache: MutableMap<String, FileCache> = mutableMapOf()
+    private var lastFolderScan: Long = 0
+    private val folderScanInterval = 2000L // Check for new/deleted files every 2 seconds
     private var isCacheRefreshing = false
 
 
@@ -63,43 +77,116 @@ class FileManager(private val context: Context) {
     fun getAllFilesWithMetadata(): List<FileMetadata> {
         val currentTime = System.currentTimeMillis()
 
-        // Return cached data if still valid or already refreshing
-        if ((cachedMetadata != null && (currentTime - lastCacheTime) < cacheValidityMs) || isCacheRefreshing) {
-            return cachedMetadata ?: emptyList()
+        // Clean expired cache entries first
+        cleanExpiredCache()
+
+        // Check if we need to scan for new/deleted files
+        if (currentTime - lastFolderScan > folderScanInterval) {
+            updateFileList()
+            lastFolderScan = currentTime
         }
 
-        // Prevent concurrent cache refreshes
+        // Clean cache if it's too large
+        cleanupCacheIfNeeded()
+
+        // Return cached metadata, sorted by last modified (same as before)
+        return fileCache.values.map { it.metadata }.sortedByDescending { it.lastModified }
+    }
+
+    private fun updateFileList() {
+        if (isCacheRefreshing) return
         isCacheRefreshing = true
 
         try {
-            // Your existing cache refresh logic...
-            val folderUri = getFolderUri() ?: return emptyList()
-            val folder = DocumentFile.fromTreeUri(context, folderUri) ?: return emptyList()
+            val folderUri = getFolderUri() ?: return
+            val folder = DocumentFile.fromTreeUri(context, folderUri) ?: return
 
-            cachedMetadata = folder.listFiles()
+            val currentFiles = folder.listFiles()
                 .filter { it.isFile && it.name?.endsWith(".txt") == true }
-                .map { documentFile ->
-                    val content = readFileContent(documentFile)
-                    FileMetadata(
-                        documentFile = documentFile,
-                        title = documentFile.name?.removeSuffix(".txt") ?: "Untitled",
-                        lastModified = documentFile.lastModified(),
-                        wordCount = countWordsFromContent(content),
-                        tags = parseTagsFromContent(content)
-                    )
-                }
-                .sortedByDescending { it.lastModified }
 
-            lastCacheTime = currentTime
-            return cachedMetadata!!
+            val currentFileUris = currentFiles.map { it.uri.toString() }.toSet()
+            val cachedFileUris = fileCache.keys.toSet()
+
+            // Remove deleted files from cache
+            val deletedFiles = cachedFileUris - currentFileUris
+            deletedFiles.forEach { fileCache.remove(it) }
+
+            // Check each current file - only update if modified
+            currentFiles.forEach { documentFile ->
+                val fileUri = documentFile.uri.toString()
+                val fileLastModified = documentFile.lastModified()
+                val cachedFile = fileCache[fileUri]
+
+                // Update cache ONLY if file is new or actually modified
+                if (cachedFile == null || cachedFile.lastModified != fileLastModified) {
+                    updateFileMetadata(documentFile, fileUri, fileLastModified)
+                }
+            }
         } finally {
             isCacheRefreshing = false
         }
     }
 
-    // Invalidate cache when files change
-    private fun invalidateCache() {
-        cachedMetadata = null
+    private fun updateFileMetadata(documentFile: DocumentFile, fileUri: String, fileLastModified: Long) {
+        try {
+            val content = readFileContent(documentFile)
+            val metadata = FileMetadata(
+                documentFile = documentFile,
+                title = documentFile.name?.removeSuffix(".txt") ?: "Untitled",
+                lastModified = fileLastModified,
+                wordCount = countWordsFromContent(content),
+                tags = parseTagsFromContent(content)
+            )
+
+            fileCache[fileUri] = FileCache(
+                uri = fileUri,
+                lastModified = fileLastModified,
+                metadata = metadata,
+                cacheTimestamp = System.currentTimeMillis()
+            )
+        } catch (e: Exception) {
+            // Handle error gracefully - don't break the app
+        }
+    }
+
+    // Cache management functions
+    private fun cleanExpiredCache() {
+        val currentTime = System.currentTimeMillis()
+        val expiryTime = CACHE_EXPIRY_HOURS * 60 * 60 * 1000L
+
+        val expiredEntries = fileCache.filter { (_, cache) ->
+            currentTime - cache.cacheTimestamp > expiryTime
+        }
+
+        expiredEntries.keys.forEach { fileCache.remove(it) }
+    }
+
+    private fun cleanupCacheIfNeeded() {
+        if (fileCache.size > CACHE_CLEANUP_THRESHOLD) {
+            // Keep only the most recently cached files
+            val sortedEntries = fileCache.entries.sortedByDescending { it.value.cacheTimestamp }
+            fileCache.clear()
+            sortedEntries.take(MAX_CACHE_SIZE).forEach { (key, value) ->
+                fileCache[key] = value
+            }
+        }
+    }
+
+    // Update specific file when it's modified
+    private fun updateFileCache(documentFile: DocumentFile) {
+        val fileUri = documentFile.uri.toString()
+        val fileLastModified = documentFile.lastModified()
+        updateFileMetadata(documentFile, fileUri, fileLastModified)
+    }
+
+    // Remove file from cache
+    private fun removeFileFromCache(documentFile: DocumentFile) {
+        fileCache.remove(documentFile.uri.toString())
+    }
+
+    // Add function to get cached word count (for DiaryRepositoryImpl)
+    fun getCachedWordCount(documentFile: DocumentFile): Int {
+        return fileCache[documentFile.uri.toString()]?.metadata?.wordCount ?: 0
     }
 
     // Optimized word counting from content (avoids re-reading file)
@@ -174,15 +261,13 @@ class FileManager(private val context: Context) {
         val sanitizedName = sanitizeFileName(fileName)
         val documentFile = folder.createFile("text/plain", "$sanitizedName.txt") ?: return null
 
-
-        // Add filename and time as first line of editable content
+        // Keep your existing file creation logic
         val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
         val currentTime = timeFormat.format(Date())
             .uppercase()
             .replace(".", "")
         val firstLine = "# $sanitizedName  $currentTime\n\n"
 
-        // Add hashtag categorization based on current path
         val content = if (currentPath.isNotEmpty()) {
             val hashtagPath = "#${currentPath.replace("/", "#")}"
             "$firstLine\n\n$hashtagPath"
@@ -192,7 +277,7 @@ class FileManager(private val context: Context) {
 
         val success = writeToFile(documentFile, content)
         if (success) {
-            invalidateCache() // Invalidate cache after creating
+            updateFileCache(documentFile) // Update only this file's cache
         }
         return if (success) documentFile else null
     }
@@ -226,7 +311,7 @@ class FileManager(private val context: Context) {
 
         val success = writeToFile(documentFile, content)
         if (success) {
-            invalidateCache() // Invalidate cache after creating
+            updateFileCache(documentFile) // Invalidate cache after creating
         }
         return if (success) documentFile else null
     }
@@ -258,7 +343,7 @@ class FileManager(private val context: Context) {
     fun writeFileContent(documentFile: DocumentFile, content: String): Boolean {
         val success = writeToFile(documentFile, content)
         if (success) {
-            invalidateCache() // Invalidate cache after writing
+            updateFileCache(documentFile) // Update only this file's cache
         }
         return success
     }
@@ -267,7 +352,7 @@ class FileManager(private val context: Context) {
     fun deleteFile(documentFile: DocumentFile): Boolean {
         val success = documentFile.delete()
         if (success) {
-            invalidateCache() // Invalidate cache after deleting
+            removeFileFromCache(documentFile) // Remove only this file from cache
         }
         return success
     }
@@ -282,9 +367,12 @@ class FileManager(private val context: Context) {
             return false // Return false to indicate failure due to existing file
         }
 
+        val oldUri = documentFile.uri.toString()
         val success = documentFile.renameTo("$sanitizedName.txt")
         if (success) {
-            invalidateCache() // Invalidate cache after renaming
+            // Remove old cache entry and update with new file reference
+            fileCache.remove(oldUri)
+            updateFileCache(documentFile)
         }
         return success
     }

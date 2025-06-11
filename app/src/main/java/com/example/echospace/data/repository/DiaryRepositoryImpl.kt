@@ -31,10 +31,9 @@ class DiaryRepositoryImpl(private val fileManager: FileManager) : DiaryRepositor
 
     // Get cached word count for a specific file
     fun getWordCount(documentFile: DocumentFile): Int {
-        return fileManager.getAllFilesWithMetadata()
-            .find { it.documentFile.uri == documentFile.uri }
-            ?.wordCount ?: 0
+        return fileManager.getCachedWordCount(documentFile)
     }
+
 
     override fun createEntry(fileName: String, currentPath: String): DocumentFile? {
         return fileManager.createFile(fileName, currentPath)

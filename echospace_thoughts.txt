@@ -1,7 +1,5 @@
 basic functionality:
 - fix rotation causing the create new file dialog close, exising out of editing mode and removing the files from the homescreen
-- being able to highlight and copy in the view only mode but not edit
-- limit the cache to not overfil the internal storage
 - topbar dropdown or settings screen for theme/sorting options
 - better sorting dropdown menu UI
 - highlight text for editing maybe

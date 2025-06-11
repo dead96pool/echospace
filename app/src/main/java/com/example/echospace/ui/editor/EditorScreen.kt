@@ -2,7 +2,7 @@ package com.example.echospace.ui.editor
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.ExperimentalFoundationApi
+//import androidx.compose.foundation.ExperimentalFoundationApi
 //import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +14,7 @@ import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Done
@@ -61,7 +62,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 //@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
-@OptIn(ExperimentalFoundationApi::class)
+//@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EditorScreen(
     file: DocumentFile,
@@ -307,16 +308,18 @@ fun EditorScreen(
                     .padding(paddingValues)
                     .verticalScroll(scrollState) // Manual scroll for view mode only
             ) {
-                Text(
-                    text = parseMarkdown(textFieldValue.text),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    //color = MaterialTheme.colorScheme.onBackground,
-                    style = MaterialTheme.typography.bodyMedium,
-                    lineHeight = 22.sp,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                SelectionContainer {
+                    Text(
+                        text = parseMarkdown(textFieldValue.text),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        //color = MaterialTheme.colorScheme.onBackground,
+                        style = MaterialTheme.typography.bodyMedium,
+                        lineHeight = 22.sp,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
             }
         }
     }

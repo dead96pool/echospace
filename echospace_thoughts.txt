@@ -2,6 +2,7 @@ basic functionality:
 - fix rotation causing the create new file dialog close, exising out of editing mode and removing the files from the homescreen
 - topbar dropdown or settings screen for theme/sorting options
 - better sorting dropdown menu UI
+- better delete and rename dropdown UI
 - highlight text for editing maybe
 - hardware support for keyboard
 - double and single quote support
@@ -30,3 +31,7 @@ future features:
 - AI summary to search for long forgotten notes
 - setting reminders as alarms for certain notes
 - being able to set custom folder colours
+- implement various tags along with folder structure
+- save version for files basically saving the changes
+- recyle bin
+- archive notes

@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt.android)
 }
 
 android {
@@ -67,6 +69,11 @@ dependencies {
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.documentfile)
     // Remove accompanist-systemuicontroller implementation
+
+    // Hilt (now using version catalog aliases)
+    implementation(libs.google.hilt.android)
+    ksp(libs.hilt.compiler) // Use ksp(...) and the alias
+    implementation(libs.hilt.navigation.compose) // Use the alias
 
     // Testing dependencies
     testImplementation(libs.junit)

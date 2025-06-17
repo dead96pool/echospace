@@ -82,7 +82,7 @@ import com.example.echospace.data.repository.DiaryRepositoryImpl
 import com.example.echospace.domain.model.CreateFileResult
 import com.example.echospace.domain.model.DiaryEntry
 import com.example.echospace.domain.model.FolderItem
-import com.example.echospace.domain.repository.DiaryRepository
+//import com.example.echospace.domain.repository.DiaryRepository
 import com.example.echospace.domain.repository.SortType
 import com.example.echospace.ui.components.CreateEntryDialog
 import com.example.echospace.ui.components.DeleteConfirmationDialog
@@ -98,12 +98,14 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun HomeScreen(
-    diaryRepository: DiaryRepository,
+    viewModel: HomeViewModel,
     isDarkTheme: Boolean = false,
     onThemeToggle: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    // GET the repository from the ViewModel
+    val diaryRepository = viewModel.diaryRepository
 
     var currentPath by remember { mutableStateOf("") }
     var showCreateDialog by remember { mutableStateOf(false) }

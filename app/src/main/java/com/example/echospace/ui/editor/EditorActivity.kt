@@ -2,7 +2,6 @@ package com.example.echospace.ui.editor
 
 import android.content.Intent
 //import android.net.Uri
-import androidx.core.net.toUri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,19 +13,27 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.documentfile.provider.DocumentFile
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.lifecycleScope
-import com.example.echospace.data.local.FileManager
-import com.example.echospace.data.repository.DiaryRepositoryImpl
+//import com.example.echospace.data.local.FileManager
+//import com.example.echospace.data.repository.DiaryRepositoryImpl
 import com.example.echospace.ui.theme.EchoSpaceTheme
 import com.example.echospace.utils.ThemePreferences
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 //import java.io.File
+//import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class EditorActivity : ComponentActivity() {
-    private lateinit var themePreferences: ThemePreferences
 
+    // Ask Hilt to provide this dependency
+    @Inject
+    lateinit var themePreferences: ThemePreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,7 +44,6 @@ class EditorActivity : ComponentActivity() {
         // Configure window for proper keyboard handling
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        themePreferences = ThemePreferences(this)
 
         val fileUriString = intent.getStringExtra("file_uri") ?: ""
         val startInEditMode = intent.getBooleanExtra("edit_mode", false)
@@ -58,10 +64,11 @@ class EditorActivity : ComponentActivity() {
 
 
         // Initialize repository
-        val fileManager = FileManager(this)
-        val diaryRepository = DiaryRepositoryImpl(fileManager)
+        //val fileManager = FileManager(this)
+        //val diaryRepository = DiaryRepositoryImpl(fileManager)
 
         setContent {
+            val editorViewModel: EditorViewModel = hiltViewModel()
             // Collect theme state from preferences
             val isDarkTheme by themePreferences.isDarkTheme.collectAsState(initial = false)
 
@@ -81,7 +88,7 @@ class EditorActivity : ComponentActivity() {
                 ) {
                     EditorScreen(
                         file = documentFile,
-                        diaryRepository = diaryRepository,
+                        viewModel = editorViewModel,
                         startInEditMode = startInEditMode,
                         isDarkTheme = isDarkTheme,
                         currentPath = currentPath,

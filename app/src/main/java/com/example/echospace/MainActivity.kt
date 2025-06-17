@@ -1,10 +1,12 @@
 package com.example.echospace
 
 import android.app.AlertDialog
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -14,36 +16,45 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.lifecycleScope
 import com.example.echospace.data.local.FileManager
-import com.example.echospace.data.repository.DiaryRepositoryImpl
+//import com.example.echospace.data.repository.DiaryRepositoryImpl
 import com.example.echospace.ui.home.HomeScreen
+import com.example.echospace.ui.home.HomeViewModel
 import com.example.echospace.ui.theme.EchoSpaceTheme
 import com.example.echospace.utils.ThemePreferences
 import kotlinx.coroutines.launch
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    private lateinit var themePreferences: ThemePreferences
-    private lateinit var fileManager: FileManager
 
-    private val folderPickerLauncher = registerForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        uri?.let {
-            fileManager.saveFolderUri(it)
-            // Continue with normal app initialization
-            initializeApp()
-        }
-    }
+    // Ask Hilt to provide these instead of creating them manually
+    @Inject
+    lateinit var themePreferences: ThemePreferences
+    @Inject
+    lateinit var fileManager: FileManager
+
+    // Declare the launcher here, but do not initialize it yet.
+    private lateinit var folderPickerLauncher: ActivityResultLauncher<Uri?>
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        folderPickerLauncher = registerForActivityResult(
+            ActivityResultContracts.OpenDocumentTree()
+        ) { uri ->
+            uri?.let {
+                fileManager.saveFolderUri(it)
+                initializeApp()
+            }
+        }
+
         // Enable edge-to-edge display
         enableEdgeToEdge()
-
-        themePreferences = ThemePreferences(this)
-        fileManager = FileManager(this)
 
         // Check if user has selected a folder
         if (!fileManager.isFolderSelected()) {
@@ -56,7 +67,7 @@ class MainActivity : ComponentActivity() {
     private fun showFolderSelectionDialog() {
         AlertDialog.Builder(this)
             .setTitle("Select EchoSpace Folder")
-            .setMessage("Please select where you want to store your diary files.")
+            .setMessage("Please select where you want to store your files.")
             .setPositiveButton("Select Folder") { _, _ ->
                 folderPickerLauncher.launch(null)
             }
@@ -66,12 +77,8 @@ class MainActivity : ComponentActivity() {
 
     private fun initializeApp() {
 
-        //val fileManager = FileManager(this)
-        // Initialize repository
-        val diaryRepository = DiaryRepositoryImpl(fileManager)
-
-
         setContent {
+            val homeViewModel: HomeViewModel = hiltViewModel() // Get ViewModel from Hilt
             // Collect theme state from preferences (defaults to light theme)
             val isDarkTheme by themePreferences.isDarkTheme.collectAsState(initial = false)
 
@@ -93,7 +100,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     HomeScreen(
-                        diaryRepository = diaryRepository,
+                        viewModel = homeViewModel,
                         isDarkTheme = isDarkTheme,
                         onThemeToggle = {
                             lifecycleScope.launch {

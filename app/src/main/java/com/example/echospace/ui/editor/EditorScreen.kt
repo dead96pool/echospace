@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.documentfile.provider.DocumentFile
 import com.example.echospace.data.repository.DiaryRepositoryImpl
-import com.example.echospace.domain.repository.DiaryRepository
+//import com.example.echospace.domain.repository.DiaryRepository
 import com.example.echospace.utils.parseMarkdown
 import kotlinx.coroutines.Dispatchers
 //import java.io.File
@@ -66,7 +66,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun EditorScreen(
     file: DocumentFile,
-    diaryRepository: DiaryRepository,
+    viewModel: EditorViewModel,
     startInEditMode: Boolean,
     isDarkTheme: Boolean,
     @Suppress("UNUSED_PARAMETER") onThemeToggle: () -> Unit,
@@ -75,6 +75,8 @@ fun EditorScreen(
     onPathChanged: (String) -> Unit = {}
 ) {
     var isEditMode by remember { mutableStateOf(startInEditMode) }
+    // GET the repository from the ViewModel
+    val diaryRepository = viewModel.diaryRepository
 
     // Use TextFieldValue to track cursor position
     var textFieldValue by remember {

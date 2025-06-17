@@ -14,6 +14,9 @@ basic functionality:
 - option for private folder (using the # folder tag maybe)
 - UI for folder classification apart from the hashtags
 - maybe import markdown libraries to have a better parser
+- correct the colours theme.kt file to standardise the colours used
+- select multiple files to delete them together (but not folders, delete option should not show up)
+- better animation for opening files/folders like a zoom in effect instead of screen swipe.
 
 
 
@@ -35,3 +38,10 @@ future features:
 - save version for files basically saving the changes
 - recyle bin
 - archive notes
+
+potentially current future ideas:
+- Provide real-time syntax highlighting in the editor view
+- Add a simple toolbar with buttons to easily insert markdown syntax (e.g., apply bold, create a heading, insert a bullet point)
+- Expand your parser to support checklists [ ] / [x]
+- When a user types #, suggest existing tags/folder paths.
+- export notes to backup as zip

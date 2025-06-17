@@ -14,9 +14,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class DiaryRepositoryImpl(private val fileManager: FileManager) : DiaryRepository {
-
-    private val virtualFolderManager = VirtualFolderManager()
+class DiaryRepositoryImpl(
+    private val fileManager: FileManager,
+    private val virtualFolderManager: VirtualFolderManager
+) : DiaryRepository {
 
     override fun getAllEntries(): List<DiaryEntry> {
         return fileManager.getAllFilesWithMetadata().map { metadata ->

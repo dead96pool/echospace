@@ -1,186 +1,31 @@
-// data/repository/DiaryRepositoryImpl.kt
+// /app/src/main/java/com/example/echospace/data/repository/DiaryRepositoryImpl.kt
+
 package com.example.echospace.data.repository
 
+import androidx.documentfile.provider.DocumentFile
 import com.example.echospace.data.local.FileManager
 import com.example.echospace.domain.model.DiaryEntry
-import com.example.echospace.domain.model.FolderItem
-import com.example.echospace.domain.model.CreateFileResult
 import com.example.echospace.domain.repository.DiaryRepository
-import com.example.echospace.domain.repository.SortType
-import com.example.echospace.utils.VirtualFolderManager
-import androidx.documentfile.provider.DocumentFile
-//import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 class DiaryRepositoryImpl(
-    private val fileManager: FileManager,
-    private val virtualFolderManager: VirtualFolderManager
+    private val fileManager: FileManager
 ) : DiaryRepository {
 
-    override fun getAllEntries(): List<DiaryEntry> {
-        return fileManager.getAllFilesWithMetadata().map { metadata ->
-            DiaryEntry(
-                file = metadata.documentFile,
-                title = metadata.title,
-                lastModified = metadata.lastModified,
-                tags = metadata.tags
-            )
-        }
+    override suspend fun getEntries(): List<DiaryEntry> {
+        return fileManager.getFiles()
+            .map { DiaryEntry(file = it, name = it.name?.removeSuffix(".txt") ?: "Untitled") }
+            .sortedByDescending { it.file.lastModified() }
     }
 
-    // Get cached word count for a specific file
-    fun getWordCount(documentFile: DocumentFile): Int {
-        return fileManager.getCachedWordCount(documentFile)
+    override suspend fun createEntry(fileName: String): DocumentFile? {
+        return fileManager.createFile(fileName)
     }
 
-
-    override fun createEntry(fileName: String, currentPath: String): DocumentFile? {
-        return fileManager.createFile(fileName, currentPath)
+    override suspend fun readContent(file: DocumentFile): String {
+        return fileManager.readFile(file)
     }
 
-    override fun createEntryWithCurrentDate(currentPath: String): DocumentFile? {
-        return fileManager.createFileWithCurrentDate(currentPath)
+    override suspend fun writeContent(file: DocumentFile, content: String) {
+        fileManager.writeFile(file, content)
     }
-
-    override fun readEntryContent(file: DocumentFile): String {
-        return fileManager.readFileContent(file)
-    }
-
-    override fun writeEntryContent(file: DocumentFile, content: String): Boolean {
-        return fileManager.writeFileContent(file, content)
-    }
-
-    override fun renameEntry(file: DocumentFile, newName: String): Boolean {
-        return fileManager.renameFile(file, newName)
-    }
-
-    // Add this function to your DiaryRepositoryImpl.kt
-    fun renameEntryWithResult(file: DocumentFile, newName: String): CreateFileResult {
-        // Check if file with new name already exists
-        if (fileManager.fileExists(newName)) {
-            return CreateFileResult.FILENAME_EXISTS
-        }
-
-        // Attempt to rename
-        return if (fileManager.renameFile(file, newName)) {
-            CreateFileResult.SUCCESS
-        } else {
-            CreateFileResult.OTHER_ERROR
-        }
-    }
-
-    override fun deleteEntry(file: DocumentFile): Boolean {
-        return fileManager.deleteFile(file)
-    }
-
-    override fun getFolderContents(currentPath: String): List<FolderItem> {
-        val allEntries = getAllEntries()
-        return virtualFolderManager.getFolderContents(allEntries, currentPath)
-    }
-
-    override fun getParentPath(currentPath: String): String? {
-        return virtualFolderManager.getParentPath(currentPath)
-    }
-
-    override fun hasContentInPath(path: String): Boolean {
-        val allEntries = getAllEntries()
-        return virtualFolderManager.hasContentInPath(path, allEntries)
-    }
-
-    fun findNearestParentWithContent(currentPath: String): String {
-        val allEntries = getAllEntries()
-        return virtualFolderManager.findNearestParentWithContent(currentPath, allEntries)
-    }
-
-    override fun createEntryWithResult(fileName: String, currentPath: String): Pair<CreateFileResult, DocumentFile?> {
-        return if (fileName.isBlank()) {
-            // Auto-generate name using current date
-            createEntryWithCurrentDateResult(currentPath)
-        } else {
-            // Check if file exists first
-            if (fileManager.fileExists(fileName)) {
-                Pair(CreateFileResult.FILENAME_EXISTS, null)
-            } else {
-                val file = fileManager.createFile(fileName, currentPath)
-                if (file != null) {
-                    Pair(CreateFileResult.SUCCESS, file)
-                } else {
-                    Pair(CreateFileResult.OTHER_ERROR, null)
-                }
-            }
-        }
-    }
-
-    override fun createEntryWithCurrentDateResult(currentPath: String): Pair<CreateFileResult, DocumentFile?> {
-        // Generate the auto name
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val autoGeneratedName = dateFormat.format(Date())
-
-        // Check if it exists first
-        if (fileManager.fileExists(autoGeneratedName)) {
-            return Pair(CreateFileResult.FILENAME_EXISTS, null)
-        }
-
-        // Try to create it
-        val file = fileManager.createFileWithCurrentDate(currentPath)
-        return if (file != null) {
-            Pair(CreateFileResult.SUCCESS, file)
-        } else {
-            // If creation failed but file doesn't exist, it's a different error
-            Pair(CreateFileResult.OTHER_ERROR, null)
-        }
-    }
-
-    override fun getFolderContentsSorted(currentPath: String, sortType: SortType): List<FolderItem> {
-        val folderContents = virtualFolderManager.getFolderContents(getAllEntries(), currentPath)
-
-        return when (sortType) {
-            SortType.NAME_ASC -> folderContents.sortedWith(
-                compareBy<FolderItem> { !it.isFolder } // Folders first
-                    .thenBy { it.name.lowercase() } // Then by name (case-insensitive)
-            )
-            SortType.NAME_DESC -> folderContents.sortedWith(
-                compareBy<FolderItem> { !it.isFolder }
-                    .thenByDescending { it.name.lowercase() }
-            )
-            SortType.TIME_ASC -> folderContents.sortedWith(
-                compareBy<FolderItem> { !it.isFolder }
-                    .thenBy { it.entry?.lastModified ?: 0L }
-            )
-            SortType.TIME_DESC -> folderContents.sortedWith(
-                compareBy<FolderItem> { !it.isFolder }
-                    .thenByDescending { it.entry?.lastModified ?: 0L }
-            )
-        }
-    }
-
-    override fun searchEntries(query: String, currentPath: String): List<FolderItem> {
-        if (query.isBlank()) return emptyList()
-
-        val allEntries = getAllEntries()
-        val matchingEntries = allEntries.filter { entry ->
-            // Search in file title (without extension)
-            entry.title.contains(query, ignoreCase = true) ||
-                    // Search in file content (including first line title and last line hashtags)
-                    try {
-                        // Use the correct method for DocumentFile
-                        readEntryContent(entry.file).contains(query, ignoreCase = true)
-                    } catch (e: Exception) {
-                        false
-                    }
-        }
-
-        // Convert matching entries to FolderItem format
-        return matchingEntries.map { entry ->
-            FolderItem(
-                name = entry.title,
-                path = "", // Search results don't need path navigation
-                isFolder = false,
-                entry = entry
-            )
-        }
-    }
-
 }

@@ -1,6 +1,0 @@
-# Baseline profile for EchoSpace
-HSPLcom/example/echospace/ui/home/HomeScreenKt;
-HSPLcom/example/echospace/data/local/FileManager;
-HSPLcom/example/echospace/data/repository/DiaryRepositoryImpl;
-HSPLcom/example/echospace/ui/components/FolderItemComponent;
-HSPLcom/example/echospace/utils/VirtualFolderManager;

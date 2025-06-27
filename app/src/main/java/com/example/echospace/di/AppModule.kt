@@ -4,6 +4,7 @@ package com.example.echospace.di
 
 import android.content.Context
 import com.example.echospace.data.local.FileManager
+import com.example.echospace.data.preferences.ThemePreferences
 import com.example.echospace.data.repository.DiaryRepositoryImpl
 import com.example.echospace.domain.repository.DiaryRepository
 import dagger.Module
@@ -27,5 +28,11 @@ object AppModule {
     @Singleton
     fun provideDiaryRepository(fileManager: FileManager): DiaryRepository {
         return DiaryRepositoryImpl(fileManager)
+    }
+
+    @Provides
+    @Singleton
+    fun provideThemePreferences(@ApplicationContext context: Context): ThemePreferences {
+        return ThemePreferences(context)
     }
 }

@@ -2,7 +2,6 @@
 
 package com.example.echospace.ui.home
 
-//import android.app.Activity
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,16 +16,23 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+//import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.echospace.domain.model.DiaryEntry
 import com.example.echospace.ui.components.CreateEntryDialog
+import com.example.echospace.ui.components.SlimTopBar
 import com.example.echospace.ui.editor.EditorActivity
+import com.example.echospace.ui.theme.ThemeViewModel
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+//@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(viewModel: HomeViewModel) {
+fun HomeScreen(
+    viewModel: HomeViewModel,
+    themeViewModel: ThemeViewModel
+) {
     val context = LocalContext.current
     val entries by viewModel.entries.collectAsState()
+    val isDarkTheme by themeViewModel.isDarkTheme.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
@@ -42,7 +48,11 @@ fun HomeScreen(viewModel: HomeViewModel) {
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("EchoSpace") })
+            SlimTopBar(
+                title = "EchoSpace",
+                isDarkTheme = isDarkTheme,
+                onThemeToggle = { themeViewModel.toggleTheme() }
+            )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showDialog = true }) {
@@ -59,6 +69,7 @@ fun HomeScreen(viewModel: HomeViewModel) {
                 DiaryEntryItem(entry = entry) {
                     val intent = Intent(context, EditorActivity::class.java).apply {
                         putExtra("file_uri", entry.file.uri.toString())
+                        putExtra("is_dark_theme", isDarkTheme)
                     }
                     editorLauncher.launch(intent)
                 }
@@ -76,6 +87,7 @@ fun HomeScreen(viewModel: HomeViewModel) {
                     file?.let {
                         val intent = Intent(context, EditorActivity::class.java).apply {
                             putExtra("file_uri", it.uri.toString())
+                            putExtra("is_dark_theme", isDarkTheme)
                         }
                         editorLauncher.launch(intent)
                     }

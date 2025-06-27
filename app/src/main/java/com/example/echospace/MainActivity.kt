@@ -10,11 +10,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.echospace.data.local.FileManager
 import com.example.echospace.ui.home.HomeScreen
 import com.example.echospace.ui.theme.EchoSpaceTheme
+import com.example.echospace.ui.theme.ThemeViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -35,13 +38,23 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         if (!fileManager.isFolderSelected()) {
             showFolderSelectionDialog()
         } else {
             setContent {
-                EchoSpaceTheme {
-                    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                        HomeScreen(viewModel = hiltViewModel())
+                val themeViewModel: ThemeViewModel = hiltViewModel()
+                val isDarkTheme by themeViewModel.isDarkTheme.collectAsState()
+
+                EchoSpaceTheme(darkTheme = isDarkTheme) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        HomeScreen(
+                            viewModel = hiltViewModel(),
+                            themeViewModel = themeViewModel
+                        )
                     }
                 }
             }

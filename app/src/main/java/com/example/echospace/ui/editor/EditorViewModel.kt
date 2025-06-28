@@ -26,10 +26,16 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    fun saveContent(file: DocumentFile, text: String, onSaveComplete: () -> Unit) {
+    fun saveContent(file: DocumentFile, text: String, onSaveComplete: (() -> Unit)? = null) {
         viewModelScope.launch {
+            // Save to file
             diaryRepository.writeContent(file, text)
-            onSaveComplete()
+
+            // Update the UI state with the new content
+            _content.value = text
+
+            // Call the completion callback
+            onSaveComplete?.invoke()
         }
     }
 }

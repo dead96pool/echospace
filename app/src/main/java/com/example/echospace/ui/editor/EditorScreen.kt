@@ -1,10 +1,13 @@
-// /app/src/main/java/com/example/echospace/ui/editor/EditorScreen.kt
-
 package com.example.echospace.ui.editor
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
@@ -12,48 +15,82 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
 import com.example.echospace.ui.theme.ThemeViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
 
 @Composable
 fun EditorScreen(
     file: DocumentFile,
     viewModel: EditorViewModel,
     themeViewModel: ThemeViewModel,
-    onNavigateUp: () -> Unit
+    @Suppress("UNUSED_PARAMETER") onNavigateUp: () -> Unit
 ) {
     val content by viewModel.content.collectAsState()
-    val isDarkTheme by themeViewModel.isDarkTheme.collectAsState()
+    @Suppress("UNUSED_VARIABLE") val isDarkTheme by themeViewModel.isDarkTheme.collectAsState()
     var isEditMode by remember { mutableStateOf(false) }
     var textFieldValue by remember(content) { mutableStateOf(TextFieldValue(content)) }
 
-    // Snackbar state
+    // Modern keyboard and focus management
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+
+    // Pre-calculate the auto scroll buffer value
+    val bufferPx = with(LocalDensity.current) { 80.dp.toPx() }
+
+    // Scroll states for both modes
+    val readScrollState = rememberScrollState()
+    val editScrollState = rememberScrollState()
+
+    // Snackbar state - LOCAL to EditorScreen
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    // Load content when file changes
     LaunchedEffect(file) {
         viewModel.loadContent(file)
     }
 
+    // Auto-focus and show keyboard when entering edit mode
+    LaunchedEffect(isEditMode) {
+        if (isEditMode) {
+            try {
+                focusRequester.requestFocus()
+                delay(100)
+                keyboardController?.show()
+            } catch (e: Exception) {
+                delay(300)
+                keyboardController?.show()
+            }
+        }
+    }
+
     // Handle system back button when in edit mode
     BackHandler(enabled = isEditMode) {
-        // Save content on back press if in edit mode
         viewModel.saveContent(file, textFieldValue.text) {
             isEditMode = false
             scope.launch {
-                snackbarHostState.showSnackbar("File saved")
+                snackbarHostState.showSnackbar(
+                    message = "File Saved!",
+                    duration = SnackbarDuration.Short // Same duration here
+                )
             }
         }
     }
 
     Scaffold(
         snackbarHost = {
-            // Custom snackbar host with centered, custom width
             BoxWithConstraints(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.BottomCenter
@@ -61,9 +98,20 @@ fun EditorScreen(
                 SnackbarHost(
                     hostState = snackbarHostState,
                     modifier = Modifier
-                        .width(maxWidth * 0.7f) // 70% of screen width
-                        .padding(bottom = 16.dp)
-                )
+                        .width(maxWidth * 0.4f)
+                        .padding(bottom = 32.dp)
+                ) { data ->
+                    Snackbar(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text(
+                            text = data.visuals.message,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center // Center the text
+                        )
+                    }
+                }
             }
         },
         floatingActionButton = {
@@ -73,7 +121,9 @@ fun EditorScreen(
                         viewModel.saveContent(file, textFieldValue.text) {
                             isEditMode = false
                             scope.launch {
-                                snackbarHostState.showSnackbar("File saved")
+                                snackbarHostState.showSnackbar("File Saved!")
+                                delay(1000)
+                                snackbarHostState.currentSnackbarData?.dismiss()
                             }
                         }
                     } else {
@@ -88,28 +138,64 @@ fun EditorScreen(
             }
         }
     ) { padding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp)
+                .imePadding()
         ) {
-            if (isEditMode) {
-                BasicTextField(
-                    value = textFieldValue,
-                    onValueChange = { textFieldValue = it },
-                    modifier = Modifier.fillMaxSize(),
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(
-                        color = MaterialTheme.colorScheme.onBackground
-                    ),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
-                )
-            } else {
-                Text(
-                    text = content,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+                if (isEditMode) {
+                    BasicTextField(
+                        value = textFieldValue,
+                        onValueChange = { newValue ->
+                            textFieldValue = newValue
+                        },
+                        onTextLayout = { layoutResult ->
+                            if (textFieldValue.selection.start >= 0) {
+                                val cursorRect = layoutResult.getCursorRect(textFieldValue.selection.start)
+
+                                val adjustedRect = cursorRect.copy(
+                                    bottom = cursorRect.bottom + bufferPx
+                                )
+
+                                scope.launch {
+                                    bringIntoViewRequester.bringIntoView(adjustedRect)
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(editScrollState)
+                            .focusRequester(focusRequester)
+                            .bringIntoViewRequester(bringIntoViewRequester)
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused) {
+                                    scope.launch {
+                                        delay(300)
+                                        bringIntoViewRequester.bringIntoView()
+                                    }
+                                }
+                            },
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            color = MaterialTheme.colorScheme.onBackground
+                        ),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
+                    )
+                } else {
+                    Text(
+                        text = content,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(readScrollState)
+                    )
+                }
             }
         }
     }

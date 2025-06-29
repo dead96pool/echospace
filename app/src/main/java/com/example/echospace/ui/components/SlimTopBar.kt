@@ -3,7 +3,6 @@ package com.example.echospace.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material3.*
@@ -24,9 +23,7 @@ fun SlimTopBar(
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     showBottomShadow: Boolean = true,
     isDarkTheme: Boolean = false,
-    onThemeToggle: () -> Unit = {},
-    showBackButton: Boolean = false,
-    onBackClick: () -> Unit = {}
+    onThemeToggle: () -> Unit = {}
 ) {
     Column(
         modifier = modifier
@@ -45,34 +42,15 @@ fun SlimTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp
+                    ),
+                    color = contentColor,
                     modifier = Modifier.weight(1f)
-                ) {
-                    if (showBackButton) {
-                        IconButton(
-                            onClick = onBackClick,
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowBack,
-                                contentDescription = "Back",
-                                tint = contentColor,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
-                        ),
-                        color = contentColor
-                    )
-                }
+                )
 
                 // Theme toggle button
                 IconButton(

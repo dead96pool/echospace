@@ -29,19 +29,15 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
-import com.example.echospace.ui.theme.ThemeViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
 fun EditorScreen(
     file: DocumentFile,
-    viewModel: EditorViewModel,
-    themeViewModel: ThemeViewModel,
-    @Suppress("UNUSED_PARAMETER") onNavigateUp: () -> Unit
+    viewModel: EditorViewModel
 ) {
     val content by viewModel.content.collectAsState()
-    @Suppress("UNUSED_VARIABLE") val isDarkTheme by themeViewModel.isDarkTheme.collectAsState()
     var isEditMode by remember { mutableStateOf(false) }
     var textFieldValue by remember(content) { mutableStateOf(TextFieldValue(content)) }
 

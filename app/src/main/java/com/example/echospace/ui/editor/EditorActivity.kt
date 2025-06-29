@@ -37,9 +37,9 @@ class EditorActivity : ComponentActivity() {
             EchoSpaceTheme(darkTheme = isDarkTheme) {
                 EditorScreen(
                     file = file,
-                    viewModel = hiltViewModel(),
-                    themeViewModel = themeViewModel,
-                    onNavigateUp = { finish() }
+                    viewModel = hiltViewModel()
+                    //themeViewModel = themeViewModel,
+                    //onNavigateUp = { finish() }
                 )
             }
         }

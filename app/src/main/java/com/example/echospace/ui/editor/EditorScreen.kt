@@ -91,27 +91,35 @@ fun EditorScreen(
 
     Scaffold(
         snackbarHost = {
-            BoxWithConstraints(
+            Box(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.BottomCenter
             ) {
                 SnackbarHost(
                     hostState = snackbarHostState,
-                    modifier = Modifier
-                        .width(maxWidth * 0.4f)
-                        .padding(bottom = 32.dp)
-                ) { data ->
-                    Snackbar(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text(
-                            text = data.visuals.message,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center // Center the text
-                        )
+                    snackbar = { data ->
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            tonalElevation = 6.dp,
+                            shadowElevation = 6.dp,
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier
+                                .wrapContentWidth()
+                                .widthIn(max = 360.dp)
+                                .defaultMinSize(minWidth = 160.dp)
+                                .padding(bottom = 32.dp)
+                        ) {
+                            Text(
+                                text = data.visuals.message,
+                                modifier = Modifier
+                                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
-                }
+                )
             }
         },
         floatingActionButton = {
@@ -121,9 +129,10 @@ fun EditorScreen(
                         viewModel.saveContent(file, textFieldValue.text) {
                             isEditMode = false
                             scope.launch {
-                                snackbarHostState.showSnackbar("File Saved!")
-                                delay(1000)
-                                snackbarHostState.currentSnackbarData?.dismiss()
+                                snackbarHostState.showSnackbar(
+                                    message = "File Saved!",
+                                    duration = SnackbarDuration.Short // Same duration here
+                                )
                             }
                         }
                     } else {

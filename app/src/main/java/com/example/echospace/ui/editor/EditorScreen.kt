@@ -7,12 +7,16 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -53,7 +57,7 @@ fun EditorScreen(
     val readScrollState = rememberScrollState()
     val editScrollState = rememberScrollState()
 
-    // Snackbar state - LOCAL to EditorScreen
+    // Snackbar state
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -83,7 +87,7 @@ fun EditorScreen(
             scope.launch {
                 snackbarHostState.showSnackbar(
                     message = "File Saved!",
-                    duration = SnackbarDuration.Short // Same duration here
+                    duration = SnackbarDuration.Short
                 )
             }
         }
@@ -131,7 +135,7 @@ fun EditorScreen(
                             scope.launch {
                                 snackbarHostState.showSnackbar(
                                     message = "File Saved!",
-                                    duration = SnackbarDuration.Short // Same duration here
+                                    duration = SnackbarDuration.Short
                                 )
                             }
                         }
@@ -196,14 +200,23 @@ fun EditorScreen(
                         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
                     )
                 } else {
-                    Text(
-                        text = content,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(readScrollState)
-                    )
+                    CompositionLocalProvider(
+                        LocalTextSelectionColors provides TextSelectionColors(
+                            handleColor = MaterialTheme.colorScheme.primary,
+                            backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                        )
+                    ) {
+                        SelectionContainer {
+                            Text(
+                                text = content,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(readScrollState)
+                            )
+                        }
+                    }
                 }
             }
         }

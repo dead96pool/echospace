@@ -19,6 +19,7 @@ basic functionality:
 - correct the colours theme.kt file to standardise the colours used
 - select multiple files to delete them together (but not folders, delete option should not show up)
 - better animation for opening files/folders like a zoom in effect instead of screen swipe.
+- text selection autoscrolling
 
 
 

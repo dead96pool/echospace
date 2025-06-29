@@ -1,4 +1,14 @@
 basic functionality:
+- file list outside homescreen making modular
+- files with wordcount and last modified metadata
+- markdown parser
+- include title in the textfile
+- include autoname feature and remove the cancel option from createfiledialog
+
+- virtual folder taging using hashtags
+- auto add hashtags in file content
+
+
 - wordcount to ignore the markdown formating symbols
 - hilt making the changes not being saved to the file
 - fix rotation causing the create new file dialog close, exising out of editing mode and removing the files from the homescreen

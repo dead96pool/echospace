@@ -1,4 +1,6 @@
 basic functionality:
+- file already exist error
+- new file created enters into editing mode automatically
 - file list outside homescreen making modular
 - files with wordcount and last modified metadata
 - markdown parser

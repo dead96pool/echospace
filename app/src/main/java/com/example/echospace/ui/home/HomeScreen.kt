@@ -69,7 +69,7 @@ fun HomeScreen(
                 DiaryEntryItem(entry = entry) {
                     val intent = Intent(context, EditorActivity::class.java).apply {
                         putExtra("file_uri", entry.file.uri.toString())
-                        putExtra("is_dark_theme", isDarkTheme)
+                        //putExtra("is_dark_theme", isDarkTheme)
                     }
                     editorLauncher.launch(intent)
                 }
@@ -87,7 +87,7 @@ fun HomeScreen(
                     file?.let {
                         val intent = Intent(context, EditorActivity::class.java).apply {
                             putExtra("file_uri", it.uri.toString())
-                            putExtra("is_dark_theme", isDarkTheme)
+                            //putExtra("is_dark_theme", isDarkTheme)
                         }
                         editorLauncher.launch(intent)
                     }

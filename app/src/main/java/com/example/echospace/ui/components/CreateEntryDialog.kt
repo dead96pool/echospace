@@ -7,6 +7,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Modifier
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
 fun CreateEntryDialog(
@@ -29,17 +31,30 @@ fun CreateEntryDialog(
                 onValueChange = { text = it },
                 label = { Text("File Name") },
                 modifier = Modifier.focusRequester(focusRequester),
-                singleLine = true
+                singleLine = true,
+                placeholder = { Text("Leave empty for Auto Name") },
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                )
             )
         },
         confirmButton = {
             Button(
-                onClick = { if (text.isNotBlank()) onConfirm(text.trim()) },
-                enabled = text.isNotBlank()
-            ) { Text("Create") }
+                onClick = {
+                    val fileName = if (text.isBlank()) {
+                        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                        val currentDate = Calendar.getInstance().time
+                        dateFormat.format(currentDate)
+                    } else {
+                        text.trim()
+                    }
+                    onConfirm(fileName)
+                }
+            ) {
+                Text("Create")
+            }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
+        dismissButton = null // Remove cancel button
     )
 }

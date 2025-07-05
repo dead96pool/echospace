@@ -13,10 +13,12 @@ import java.util.*
 @Composable
 fun CreateEntryDialog(
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
+    onConfirm: (String) -> Unit,
+    errorMessage: String?
 ) {
     var text by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
+    val isError = errorMessage != null
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -33,9 +35,20 @@ fun CreateEntryDialog(
                 modifier = Modifier.focusRequester(focusRequester),
                 singleLine = true,
                 placeholder = { Text("Leave empty for Auto Name") },
+                isError = isError, // Highlights the field in red
+                supportingText = {
+                    // Displays the error message below the field
+                    if (isError) {
+                        Text(
+                            text = errorMessage ?: "",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                    errorPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                 )
             )
         },

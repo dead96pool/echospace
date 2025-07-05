@@ -1,5 +1,5 @@
 basic functionality:
-- file already exist error
+- slide file (exclude folders) to show delete and rename option
 - new file created enters into editing mode automatically
 - file list outside homescreen making modular
 - files with wordcount and last modified metadata

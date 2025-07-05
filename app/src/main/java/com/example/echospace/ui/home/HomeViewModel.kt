@@ -5,6 +5,7 @@ package com.example.echospace.ui.home
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.echospace.data.local.FileAlreadyExistsException
 import com.example.echospace.domain.model.DiaryEntry
 import com.example.echospace.domain.repository.DiaryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,6 +22,10 @@ class HomeViewModel @Inject constructor(
     private val _entries = MutableStateFlow<List<DiaryEntry>>(emptyList())
     val entries = _entries.asStateFlow()
 
+    // Add state for creation errors
+    private val _createError = MutableStateFlow<String?>(null)
+    val createError = _createError.asStateFlow()
+
     fun loadEntries() {
         viewModelScope.launch {
             _entries.value = diaryRepository.getEntries()
@@ -28,6 +33,17 @@ class HomeViewModel @Inject constructor(
     }
 
     suspend fun createEntry(fileName: String): DocumentFile? {
-        return diaryRepository.createEntry(fileName)
+        return try {
+            _createError.value = null // Clear previous error
+            diaryRepository.createEntry(fileName)
+        } catch (e: FileAlreadyExistsException) {
+            _createError.value = e.message // Set error message from the exception
+            null
+        }
+    }
+
+    // Function to clear the error message
+    fun clearCreateError() {
+        _createError.value = null
     }
 }

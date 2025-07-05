@@ -12,6 +12,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.FileOutputStream
 
+class FileAlreadyExistsException(message: String) : Exception(message)
+
 class FileManager(private val context: Context) {
 
     private val sharedPrefs = context.getSharedPreferences("echospace_prefs", Context.MODE_PRIVATE)
@@ -41,10 +43,13 @@ class FileManager(private val context: Context) {
         val folderUri = getFolderUri() ?: return@withContext null
         val folder = DocumentFile.fromTreeUri(context, folderUri) ?: return@withContext null
         val existingFile = folder.findFile("$fileName.txt")
-        if (existingFile != null) return@withContext null // File already exists
-
+        if (existingFile != null) {
+            // Throw the custom exception
+            throw FileAlreadyExistsException("File '$fileName.txt' already exists")
+        }
         folder.createFile("text/plain", "$fileName.txt")
     }
+
 
     suspend fun readFile(file: DocumentFile): String = withContext(Dispatchers.IO) {
         try {

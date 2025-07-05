@@ -16,7 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-//import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.echospace.domain.model.DiaryEntry
 import com.example.echospace.ui.components.CreateEntryDialog
 import com.example.echospace.ui.components.SlimTopBar
@@ -24,7 +24,7 @@ import com.example.echospace.ui.editor.EditorActivity
 import com.example.echospace.ui.theme.ThemeViewModel
 import kotlinx.coroutines.launch
 
-//@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
@@ -35,6 +35,9 @@ fun HomeScreen(
     val isDarkTheme by themeViewModel.isDarkTheme.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+
+    // handling the file exist error
+    val createError by viewModel.createError.collectAsState()
 
     val editorLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -69,7 +72,6 @@ fun HomeScreen(
                 DiaryEntryItem(entry = entry) {
                     val intent = Intent(context, EditorActivity::class.java).apply {
                         putExtra("file_uri", entry.file.uri.toString())
-                        //putExtra("is_dark_theme", isDarkTheme)
                     }
                     editorLauncher.launch(intent)
                 }
@@ -79,20 +81,24 @@ fun HomeScreen(
 
     if (showDialog) {
         CreateEntryDialog(
-            onDismiss = { showDialog = false },
+            onDismiss = {
+                showDialog = false
+                viewModel.clearCreateError()
+            },
             onConfirm = { fileName ->
                 coroutineScope.launch {
                     val file = viewModel.createEntry(fileName)
-                    showDialog = false
-                    file?.let {
+                    // Only close the dialog if the file was created successfully
+                    if (file != null) {
+                        showDialog = false
                         val intent = Intent(context, EditorActivity::class.java).apply {
-                            putExtra("file_uri", it.uri.toString())
-                            //putExtra("is_dark_theme", isDarkTheme)
+                            putExtra("file_uri", file.uri.toString())
                         }
                         editorLauncher.launch(intent)
                     }
                 }
-            }
+            },
+            errorMessage = createError // Pass the error message to the dialog
         )
     }
 }

@@ -16,7 +16,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.echospace.domain.model.DiaryEntry
 import com.example.echospace.ui.components.CreateEntryDialog
 import com.example.echospace.ui.components.SlimTopBar
@@ -24,7 +23,6 @@ import com.example.echospace.ui.editor.EditorActivity
 import com.example.echospace.ui.theme.ThemeViewModel
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,

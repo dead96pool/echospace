@@ -19,6 +19,9 @@ class EditorActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val fileUriString = intent.getStringExtra("file_uri")
+        val startInEditMode = intent.getBooleanExtra("start_in_edit_mode", false)
+        val initialContent = intent.getStringExtra("initial_content")
+
         if (fileUriString == null) {
             finish()
             return
@@ -37,9 +40,9 @@ class EditorActivity : ComponentActivity() {
             EchoSpaceTheme(darkTheme = isDarkTheme) {
                 EditorScreen(
                     file = file,
-                    viewModel = hiltViewModel()
-                    //themeViewModel = themeViewModel,
-                    //onNavigateUp = { finish() }
+                    viewModel = hiltViewModel(),
+                    startInEditMode = startInEditMode,
+                    initialContent = initialContent
                 )
             }
         }

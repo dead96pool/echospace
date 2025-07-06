@@ -25,6 +25,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -35,11 +36,13 @@ import kotlinx.coroutines.launch
 @Composable
 fun EditorScreen(
     file: DocumentFile,
-    viewModel: EditorViewModel
+    viewModel: EditorViewModel,
+    startInEditMode: Boolean = false,    // open keyboard with new file
+    initialContent: String? = null
 ) {
     val content by viewModel.content.collectAsState()
-    var isEditMode by remember { mutableStateOf(false) }
-    var textFieldValue by remember(content) { mutableStateOf(TextFieldValue(content)) }
+    var isEditMode by remember { mutableStateOf(startInEditMode) }
+    var textFieldValue by remember { mutableStateOf(TextFieldValue()) }
 
     // Modern keyboard and focus management
     val focusRequester = remember { FocusRequester() }
@@ -56,6 +59,28 @@ fun EditorScreen(
     // Snackbar state
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    // This effect now correctly calls the new suspend function
+    LaunchedEffect(initialContent) {
+        if (initialContent != null) {
+            // This is a new file: set its content and save it immediately
+            viewModel.setInitialContentAndSave(file, initialContent)
+        } else {
+            // This is an existing file: load content from storage
+            viewModel.loadContent(file)
+        }
+    }
+
+    // This effect synchronizes the text field with the ViewModel's content
+    LaunchedEffect(content) {
+        // Place the cursor at the end for new files or preserve it for existing ones
+        val selection = if (isEditMode && initialContent != null) {
+            TextRange(content.length)
+        } else {
+            textFieldValue.selection
+        }
+        textFieldValue = TextFieldValue(text = content, selection = selection)
+    }
 
     // Load content when file changes
     LaunchedEffect(file) {

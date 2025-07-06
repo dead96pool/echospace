@@ -1,12 +1,8 @@
 basic functionality:
 - slide file (exclude folders) to show delete and rename option
-- new file created enters into editing mode automatically
 - file list outside homescreen making modular
 - files with wordcount and last modified metadata
 - markdown parser
-- include title in the textfile
-- include autoname feature and remove the cancel option from createfiledialog
-
 - virtual folder taging using hashtags
 - auto add hashtags in file content
 
@@ -16,8 +12,8 @@ basic functionality:
 - fix rotation causing the create new file dialog close, exising out of editing mode and removing the files from the homescreen
 - topbar dropdown or settings screen for theme/sorting options
 - better sorting dropdown menu UI
-- better delete and rename dropdown UI
-- highlight text for editing maybe
+- better delete and rename dropdown UI ( slide mechanics to show options)
+- highlight text for format editing maybe
 - hardware support for keyboard
 - double and single quote support
 - change the font typeface
@@ -50,7 +46,7 @@ future features:
 - setting reminders as alarms for certain notes
 - being able to set custom folder colours
 - implement various tags along with folder structure
-- save version for files basically saving the changes
+- save version for files basically saving the changes history
 - recyle bin
 - archive notes
 

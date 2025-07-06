@@ -22,6 +22,9 @@ import com.example.echospace.ui.components.SlimTopBar
 import com.example.echospace.ui.editor.EditorActivity
 import com.example.echospace.ui.theme.ThemeViewModel
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun HomeScreen(
@@ -89,8 +92,15 @@ fun HomeScreen(
                     // Only close the dialog if the file was created successfully
                     if (file != null) {
                         showDialog = false
+
+                        val timeFormatter = SimpleDateFormat("hh:mm a", Locale.getDefault())
+                        val timestamp = timeFormatter.format(Date())
+                        val initialContent = "# $fileName $timestamp\n\n"
+
                         val intent = Intent(context, EditorActivity::class.java).apply {
                             putExtra("file_uri", file.uri.toString())
+                            putExtra("start_in_edit_mode", true)
+                            putExtra("initial_content", initialContent)
                         }
                         editorLauncher.launch(intent)
                     }

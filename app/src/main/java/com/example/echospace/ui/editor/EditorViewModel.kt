@@ -20,6 +20,14 @@ class EditorViewModel @Inject constructor(
     private val _content = MutableStateFlow("")
     val content = _content.asStateFlow()
 
+    // This function will now also save the content to the file
+    suspend fun setInitialContentAndSave(file: DocumentFile, initialText: String) {
+        // First, write the content to the physical file
+        diaryRepository.writeContent(file, initialText)
+        // Then, update the UI state
+        _content.value = initialText
+    }
+
     fun loadContent(file: DocumentFile) {
         viewModelScope.launch {
             _content.value = diaryRepository.readContent(file)

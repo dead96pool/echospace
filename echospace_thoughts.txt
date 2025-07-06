@@ -1,4 +1,6 @@
 basic functionality:
+- search option including the content
+- pull to refresh
 - slide file (exclude folders) to show delete and rename option
 - file list outside homescreen making modular
 - files with wordcount and last modified metadata

@@ -5,7 +5,6 @@ package com.example.echospace.ui.home
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,8 +15,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.echospace.domain.model.DiaryEntry
 import com.example.echospace.ui.components.CreateEntryDialog
+import com.example.echospace.ui.components.DiaryListItem
 import com.example.echospace.ui.components.SlimTopBar
 import com.example.echospace.ui.editor.EditorActivity
 import com.example.echospace.ui.theme.ThemeViewModel
@@ -66,16 +65,18 @@ fun HomeScreen(
     ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            contentPadding = PaddingValues(horizontal = 4.dp)
         ) {
             items(entries) { entry ->
-                DiaryEntryItem(entry = entry) {
+                // Replace the old Card-based item with the new clean list item
+                DiaryListItem(entry = entry) {
                     val intent = Intent(context, EditorActivity::class.java).apply {
                         putExtra("file_uri", entry.file.uri.toString())
                     }
                     editorLauncher.launch(intent)
                 }
+                // Optional: Add a subtle divider between items
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
             }
         }
     }
@@ -108,12 +109,5 @@ fun HomeScreen(
             },
             errorMessage = createError // Pass the error message to the dialog
         )
-    }
-}
-
-@Composable
-private fun DiaryEntryItem(entry: DiaryEntry, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        Text(text = entry.name, modifier = Modifier.padding(16.dp))
     }
 }

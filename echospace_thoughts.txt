@@ -1,10 +1,7 @@
 basic functionality:
 - long press to show swipe options
-- place cursor to the end of the rename text field
-- renaming to an existing file name should cause error
 - search option including the content
 - pull to refresh
-- accordian like animation for swipe to reveal
 - files with wordcount and last modified metadata
 - markdown parser
 - virtual folder taging using hashtags
@@ -53,6 +50,7 @@ future features:
 - save version for files basically saving the changes history
 - recyle bin
 - archive notes
+- accordian like animation for swipe to reveal
 
 potentially current future ideas:
 - Provide real-time syntax highlighting in the editor view

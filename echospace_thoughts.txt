@@ -1,8 +1,10 @@
 basic functionality:
+- long press to show swipe options
+- place cursor to the end of the rename text field
+- renaming to an existing file name should cause error
 - search option including the content
 - pull to refresh
-- slide file (exclude folders) to show delete and rename option
-- file list outside homescreen making modular
+- accordian like animation for swipe to reveal
 - files with wordcount and last modified metadata
 - markdown parser
 - virtual folder taging using hashtags

@@ -83,7 +83,7 @@ private val DarkColorScheme = darkColorScheme(
     onSurfaceVariant = TextWhite,
 
     // System colors
-    error = Color(0xFFFF6B6B),
+    error = SystemRed,
     onError = TextBlack,
     outline = MediumWhite,
     outlineVariant = Color(0xFF404040)

@@ -71,4 +71,27 @@ class FileManager(private val context: Context) {
             true
         } catch (e: Exception) { false }
     }
+
+    suspend fun deleteFile(file: DocumentFile): Boolean = withContext(Dispatchers.IO) {
+        return@withContext file.delete()
+    }
+
+    suspend fun renameFile(file: DocumentFile, newName: String): DocumentFile? = withContext(Dispatchers.IO) {
+        val folderUri = getFolderUri() ?: return@withContext null
+        val folder = DocumentFile.fromTreeUri(context, folderUri) ?: return@withContext null
+
+        // Check if a file with the new name already exists
+        val existingFile = folder.findFile("$newName.txt")
+        if (existingFile != null && existingFile.uri != file.uri) {
+            // Throw the same exception used for create operations
+            throw FileAlreadyExistsException("File '$newName.txt' already exists")
+        }
+
+        if (file.renameTo("$newName.txt")) {
+            // After renaming, get the new DocumentFile object
+            folder.findFile("$newName.txt")
+        } else {
+            null
+        }
+    }
 }

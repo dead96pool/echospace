@@ -28,4 +28,13 @@ class DiaryRepositoryImpl(
     override suspend fun writeContent(file: DocumentFile, content: String) {
         fileManager.writeFile(file, content)
     }
+
+    override suspend fun deleteEntry(entry: DiaryEntry): Boolean {
+        return fileManager.deleteFile(entry.file)
+    }
+
+    override suspend fun renameEntry(entry: DiaryEntry, newName: String): DiaryEntry? {
+        val newFile = fileManager.renameFile(entry.file, newName)
+        return newFile?.let { DiaryEntry(it, newName) }
+    }
 }

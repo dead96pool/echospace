@@ -19,5 +19,5 @@ val TextWhite = Color(0xFFFFFFFF)       // White text for dark backgrounds
 
 // Keep these for system elements that need standard colors
 val SystemBlue = Color(0xFF2196F3)      // For links, selections
-val SystemRed = Color(0xFFF44336)       // For errors
+val SystemRed = Color(0xFFFF6B6B)       // For errors
 val SystemGreen = Color(0xFF4CAF50)     // For success states

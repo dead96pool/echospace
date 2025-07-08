@@ -10,4 +10,6 @@ interface DiaryRepository {
     suspend fun createEntry(fileName: String): DocumentFile?
     suspend fun readContent(file: DocumentFile): String
     suspend fun writeContent(file: DocumentFile, content: String)
+    suspend fun deleteEntry(entry: DiaryEntry): Boolean
+    suspend fun renameEntry(entry: DiaryEntry, newName: String): DiaryEntry?
 }

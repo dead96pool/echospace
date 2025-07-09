@@ -1,11 +1,12 @@
 basic functionality:
-- long press to show swipe options
-- search option including the content
 - pull to refresh
 - files with wordcount and last modified metadata
-- markdown parser
-- virtual folder taging using hashtags
 - auto add hashtags in file content
+- Search functionality including content
+- virtual File organization/folders using hashtags
+- Export/import features
+- Rich text editing perhaps using markdown parser
+- Backup/sync capabilities
 
 
 - wordcount to ignore the markdown formating symbols
@@ -29,6 +30,7 @@ basic functionality:
 - select multiple files to delete them together (but not folders, delete option should not show up)
 - better animation for opening files/folders like a zoom in effect instead of screen swipe.
 - text selection autoscrolling
+- test edge cases
 
 
 
@@ -51,6 +53,8 @@ future features:
 - recyle bin
 - archive notes
 - accordian like animation for swipe to reveal
+- Are error messages localized or do you plan to add internationalization?
+
 
 potentially current future ideas:
 - Provide real-time syntax highlighting in the editor view

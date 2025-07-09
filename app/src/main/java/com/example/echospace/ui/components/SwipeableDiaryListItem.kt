@@ -1,23 +1,20 @@
 package com.example.echospace.ui.components
 
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+//import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+//import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-//import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteOutline
-//import androidx.compose.material.icons.filled.DriveFileRenameOutline
-//import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-//import androidx.compose.ui.draw.shadow
-//import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
@@ -25,44 +22,33 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.echospace.domain.model.DiaryEntry
 import com.example.echospace.ui.icons.CustomIcons
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
+//@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SwipeableDiaryListItem(
     entry: DiaryEntry,
     onItemClick: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
-    isRevealed: Boolean = false,
-    onRevealChange: (Boolean) -> Unit = {}
+    isRevealed: Boolean,
+    onRevealChange: (Boolean) -> Unit
 ) {
     val density = LocalDensity.current
-
-    // Calculate the exact width needed for two action buttons
     val actionButtonWidth = with(density) { 59.5.dp.toPx() } // Slightly smaller buttons
     val separatorWidth = with(density) { 1.dp.toPx() } // Tiny separator
     val outerPadding = with(density) { 8.dp.toPx() }
     val totalActionsWidth = (actionButtonWidth * 2) + separatorWidth + outerPadding
 
-    var offsetX by remember { mutableFloatStateOf(0f) }
-    var isDragging by remember { mutableStateOf(false) }
+    val offsetX = remember { Animatable(0f) }
+    val coroutineScope = rememberCoroutineScope()
 
-    // Target offset for animation (only used when not dragging)
-    val targetOffset = if (isRevealed) totalActionsWidth else 0f
-
-    // Smoother animation with tween for more fluid motion
-    val animatedOffsetX by animateFloatAsState(
-        targetValue = if (isDragging) offsetX else targetOffset,
-        animationSpec = tween(
-            durationMillis = if (isDragging) 0 else 200 // No animation during drag
-        ),
-        label = "swipe_offset"
-    )
-
-    // Update offsetX when isRevealed changes from parent
+    // Sync with parent state
     LaunchedEffect(isRevealed) {
-        if (!isDragging) {
-            offsetX = if (isRevealed) totalActionsWidth else 0f
+        val targetOffset = if (isRevealed) totalActionsWidth else 0f
+        if (offsetX.value != targetOffset) {
+            offsetX.animateTo(targetOffset, tween(200))
         }
     }
 
@@ -149,36 +135,49 @@ fun SwipeableDiaryListItem(
             }
         }
 
-        // Main content (file listing) - slides like a stacked layer
+        // Main content with FIXED gesture handling
         Surface(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight()
-                .zIndex(1f) // File listing stays on top but without shadow
-                .offset { IntOffset(animatedOffsetX.roundToInt(), 0) }
+                .fillMaxSize()
+                .offset { IntOffset(offsetX.value.roundToInt(), 0) }
+                .zIndex(1f)
+                // Remove combinedClickable from here
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures(
-                        onDragStart = {
-                            isDragging = true
-                        },
                         onDragEnd = {
-                            isDragging = false
-                            val shouldReveal = offsetX > totalActionsWidth * 0.5f
-                            onRevealChange(shouldReveal)
+                            coroutineScope.launch {
+                                val shouldReveal = offsetX.value > totalActionsWidth * 0.5f
+                                val targetOffset = if (shouldReveal) totalActionsWidth else 0f
+                                offsetX.animateTo(targetOffset, tween(200))
+                                onRevealChange(shouldReveal)
+                            }
+                        },
+                        onHorizontalDrag = { _, dragAmount ->
+                            coroutineScope.launch {
+                                val newOffset = (offsetX.value + dragAmount).coerceIn(0f, totalActionsWidth)
+                                offsetX.snapTo(newOffset)
+                            }
                         }
-                    ) { _, dragAmount ->
-                        if (dragAmount > 0 || offsetX > 0) {
-                            offsetX = (offsetX + dragAmount).coerceIn(0f, totalActionsWidth)
-                        }
-                    }
+                    )
                 },
             color = MaterialTheme.colorScheme.background,
             shape = RoundedCornerShape(4.dp),
-            // Removed all shadow and elevation properties for flat, stacked appearance
             shadowElevation = 0.dp,
             tonalElevation = 0.dp
         ) {
-            DiaryListItem(entry = entry, onClick = onItemClick)
+            DiaryListItem(
+                entry = entry,
+                onClick = onItemClick,
+                onLongClick = {
+                    if (offsetX.value < totalActionsWidth * 0.5f) {
+                        // If hidden, reveal actions
+                        coroutineScope.launch {
+                            offsetX.animateTo(totalActionsWidth, tween(200))
+                            onRevealChange(true)
+                        }
+                    }
+                }
+            )
         }
     }
 }

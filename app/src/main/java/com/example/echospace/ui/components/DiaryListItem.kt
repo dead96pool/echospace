@@ -1,6 +1,7 @@
 package com.example.echospace.ui.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,12 +23,22 @@ import com.example.echospace.domain.model.DiaryEntry
 @Composable
 fun DiaryListItem(
     entry: DiaryEntry,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .let { modifier ->
+                if (onLongClick != null) {
+                    modifier.combinedClickable(
+                        onClick = onClick,
+                        onLongClick = onLongClick
+                    )
+                } else {
+                    modifier.clickable { onClick() }
+                }
+            }
             .padding(vertical = 16.dp, horizontal = 8.dp), // More vertical padding for a spacious feel
         verticalAlignment = Alignment.CenterVertically
     ) {

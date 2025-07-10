@@ -1,11 +1,9 @@
 package com.example.echospace.ui.components
 
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-//import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-//import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,33 +20,44 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.echospace.domain.model.DiaryEntry
 import com.example.echospace.ui.icons.CustomIcons
-import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-//@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SwipeableDiaryListItem(
     entry: DiaryEntry,
     onItemClick: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
-    isRevealed: Boolean,
-    onRevealChange: (Boolean) -> Unit
+    isRevealed: Boolean = false,
+    onRevealChange: (Boolean) -> Unit = {}
 ) {
     val density = LocalDensity.current
-    val actionButtonWidth = with(density) { 59.5.dp.toPx() } // Slightly smaller buttons
-    val separatorWidth = with(density) { 1.dp.toPx() } // Tiny separator
+    val actionButtonWidth = with(density) { 59.5.dp.toPx() }
+    val separatorWidth = with(density) { 1.dp.toPx() }
     val outerPadding = with(density) { 8.dp.toPx() }
-    val totalActionsWidth = (actionButtonWidth * 2) + separatorWidth + outerPadding
+    val totalWidth = (actionButtonWidth * 2) + separatorWidth + outerPadding
 
-    val offsetX = remember { Animatable(0f) }
-    val coroutineScope = rememberCoroutineScope()
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    var isDragging by remember { mutableStateOf(false) }
 
-    // Sync with parent state
+    // Target offset for animation (only used when not dragging)
+    val targetOffset = if (isRevealed) totalWidth else 0f
+
+    // Smoother animation with tween for more fluid motion
+    val animatedOffsetX by animateFloatAsState(
+        targetValue = if (isDragging) offsetX else targetOffset,
+        animationSpec = if (isDragging) {
+            tween(0) // Instant during drag
+        } else {
+            tween(120) // Faster snap animation
+        },
+        label = "swipe_offset"
+    )
+
+    // Update offsetX when isRevealed changes from parent
     LaunchedEffect(isRevealed) {
-        val targetOffset = if (isRevealed) totalActionsWidth else 0f
-        if (offsetX.value != targetOffset) {
-            offsetX.animateTo(targetOffset, tween(200))
+        if (!isDragging) {
+            offsetX = if (isRevealed) totalWidth else 0f
         }
     }
 
@@ -57,127 +66,112 @@ fun SwipeableDiaryListItem(
             .fillMaxWidth()
             .height(64.dp)
     ) {
-        // Background action buttons (stacked behind the file listing)
-        Box(
-            modifier = Modifier
-                .width(129.dp)
-                .fillMaxHeight()
-                .padding(horizontal = 4.dp, vertical = 8.dp)
-                .zIndex(0f) // Ensure action buttons stay behind
-        ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.Start
-            ) {
-                // Rename button (left)
-                Box(
-                    modifier = Modifier
-                        .width(59.5.dp)
-                        .fillMaxHeight()
-                        .background(
-                            color = MaterialTheme.colorScheme.secondaryContainer,
-                            shape = RoundedCornerShape(
-                                topStart = 8.dp,
-                                bottomStart = 8.dp,
-                                topEnd = 0.dp,
-                                bottomEnd = 0.dp
-                            )
-                        )
-                        .clickable {
-                            onRename()
-                            onRevealChange(false)
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = CustomIcons.FormTextbox,
-                        contentDescription = "Rename",
-                        tint = MaterialTheme.colorScheme.background,
-                        modifier = Modifier.size(21.dp)
-                    )
-                }
-
-                // Subtle separator
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .fillMaxHeight()
-                        .background(MaterialTheme.colorScheme.background)
-                )
-
-                // Delete button (right)
-                Box(
-                    modifier = Modifier
-                        .width(59.5.dp)
-                        .fillMaxHeight()
-                        .background(
-                            color = MaterialTheme.colorScheme.error,
-                            shape = RoundedCornerShape(
-                                topStart = 0.dp,
-                                bottomStart = 0.dp,
-                                topEnd = 8.dp,
-                                bottomEnd = 8.dp
-                            )
-                        )
-                        .clickable {
-                            onDelete()
-                            onRevealChange(false)
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.DeleteOutline,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.background,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
+        ActionButtons(
+            onRename = {
+                onRename()
+                onRevealChange(false)
+            },
+            onDelete = {
+                onDelete()
+                onRevealChange(false)
             }
-        }
+        )
 
-        // Main content with FIXED gesture handling
         Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .offset { IntOffset(offsetX.value.roundToInt(), 0) }
+                .offset { IntOffset(animatedOffsetX.roundToInt(), 0) }
                 .zIndex(1f)
-                // Remove combinedClickable from here
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures(
-                        onDragEnd = {
-                            coroutineScope.launch {
-                                val shouldReveal = offsetX.value > totalActionsWidth * 0.5f
-                                val targetOffset = if (shouldReveal) totalActionsWidth else 0f
-                                offsetX.animateTo(targetOffset, tween(200))
-                                onRevealChange(shouldReveal)
-                            }
+                        onDragStart = {
+                            isDragging = true
                         },
-                        onHorizontalDrag = { _, dragAmount ->
-                            coroutineScope.launch {
-                                val newOffset = (offsetX.value + dragAmount).coerceIn(0f, totalActionsWidth)
-                                offsetX.snapTo(newOffset)
-                            }
+                        onDragEnd = {
+                            isDragging = false
+                            val shouldReveal = offsetX > totalWidth * 0.5f
+                            onRevealChange(shouldReveal)
                         }
-                    )
+                    ) { _, dragAmount ->
+                        if (dragAmount > 0 || offsetX > 0) {
+                            offsetX = (offsetX + dragAmount).coerceIn(0f, totalWidth)
+                        }
+                    }
                 },
             color = MaterialTheme.colorScheme.background,
-            shape = RoundedCornerShape(4.dp),
-            shadowElevation = 0.dp,
-            tonalElevation = 0.dp
+            shape = RoundedCornerShape(4.dp)
         ) {
             DiaryListItem(
                 entry = entry,
                 onClick = onItemClick,
                 onLongClick = {
-                    if (offsetX.value < totalActionsWidth * 0.5f) {
-                        // If hidden, reveal actions
-                        coroutineScope.launch {
-                            offsetX.animateTo(totalActionsWidth, tween(200))
-                            onRevealChange(true)
-                        }
+                    if (offsetX < totalWidth * 0.5f) {
+                        onRevealChange(true)
                     }
                 }
             )
         }
+    }
+}
+
+
+@Composable
+private fun ActionButtons(
+    onRename: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .width(128.dp)
+            .fillMaxHeight()
+            .padding(horizontal = 4.dp, vertical = 8.dp)
+    ) {
+        ActionButton(
+            onClick = onRename,
+            icon = CustomIcons.FormTextbox,
+            backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+            shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp)
+        )
+
+        Spacer(modifier = Modifier.width(1.dp))
+
+        ActionButton(
+            onClick = onDelete,
+            icon = Icons.Default.DeleteOutline,
+            backgroundColor = MaterialTheme.colorScheme.error,
+            shape = RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp)
+        )
+    }
+}
+
+@Composable
+private fun ActionButton(
+    onClick: () -> Unit,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    backgroundColor: androidx.compose.ui.graphics.Color,
+    shape: RoundedCornerShape
+) {
+    Box(
+        modifier = Modifier
+            .width(59.5.dp)
+            .fillMaxHeight()
+            .background(backgroundColor, shape)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (backgroundColor == MaterialTheme.colorScheme.error) {
+                MaterialTheme.colorScheme.background
+            } else {
+                MaterialTheme.colorScheme.background
+            },
+            modifier = if (backgroundColor == MaterialTheme.colorScheme.error) {
+                Modifier.size(22.dp)
+            } else {
+                Modifier.size(21.dp)
+            }
+        )
     }
 }

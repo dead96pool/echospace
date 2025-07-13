@@ -67,7 +67,7 @@ private val DarkColorScheme = darkColorScheme(
     onSecondaryContainer = TextBlack,
 
     // Tertiary colors - used for accent elements
-    tertiary = MarkdownHeadingDark, // Use tertiary for heading color
+    tertiary = MarkdownHeading, // Use tertiary for heading color
     onTertiary = TextBlack,
     tertiaryContainer = AlmostWhite,
     onTertiaryContainer = TextBlack,

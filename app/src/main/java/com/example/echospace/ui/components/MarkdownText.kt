@@ -20,6 +20,9 @@ fun MarkdownText(
 ) {
     val elements = remember(text) { MarkdownParser.parseMarkdown(text) }
 
+    // Define theme-aware quote color once in the composable
+    val quoteColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+
     SelectionContainer {
         Column(
             modifier = modifier.fillMaxWidth()
@@ -36,8 +39,8 @@ fun MarkdownText(
                             Text(
                                 text = element.content,
                                 style = MaterialTheme.typography.bodyLarge.copy(
-                                    fontSize = 24.sp,
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                                    fontSize = 26.sp,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                                 ),
                                 color = MaterialTheme.colorScheme.tertiary,
                                 textAlign = TextAlign.Center
@@ -64,7 +67,7 @@ fun MarkdownText(
                                 style = MaterialTheme.typography.bodyLarge
                             )
                             Text(
-                                text = MarkdownParser.parseInlineFormatting(element.content),
+                                text = MarkdownParser.parseInlineFormatting(element.content, quoteColor),
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }
@@ -92,13 +95,14 @@ fun MarkdownText(
                                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
                                         shape = RectangleShape
                                     )
-                                    .padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp)
+                                    .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 12.dp)
                             ) {
                                 Text(
-                                    text = MarkdownParser.parseInlineFormatting(element.content),
+                                    text = MarkdownParser.parseInlineFormatting(element.content, quoteColor),
                                     style = MaterialTheme.typography.bodyLarge.copy(
-                                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                                    ),
+                                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                        color = quoteColor
+                                    )
                                 )
                             }
                         }
@@ -109,7 +113,7 @@ fun MarkdownText(
                     }
                     MarkdownType.PARAGRAPH -> {
                         Text(
-                            text = MarkdownParser.parseInlineFormatting(element.content),
+                            text = MarkdownParser.parseInlineFormatting(element.content, quoteColor),
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.padding(vertical = 8.dp)
                         )

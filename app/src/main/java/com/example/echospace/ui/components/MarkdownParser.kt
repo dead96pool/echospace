@@ -1,7 +1,7 @@
 // ui/components/MarkdownParser.kt
 package com.example.echospace.ui.components
 
-//import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -50,9 +50,9 @@ object MarkdownParser {
     }
 
     fun parseInlineFormatting(
-        text: String
+        text: String,
+        quoteColor: Color? = null
     ): AnnotatedString {
-
         val builder = AnnotatedString.Builder()
         var currentIndex = 0
 
@@ -92,11 +92,16 @@ object MarkdownParser {
                     val endIndex = text.indexOf('"', currentIndex + 1)
                     if (endIndex != -1) {
                         val quotedText = text.substring(currentIndex + 1, endIndex)
-                        builder.withStyle(
+                        val quoteStyle = if (quoteColor != null) {
                             SpanStyle(
-                                fontStyle = FontStyle.Italic
+                                fontStyle = FontStyle.Italic,
+                                color = quoteColor
                             )
-                        ) {
+                        } else {
+                            SpanStyle(fontStyle = FontStyle.Italic)
+                        }
+
+                        builder.withStyle(quoteStyle) {
                             append("\"$quotedText\"")
                         }
                         currentIndex = endIndex + 1

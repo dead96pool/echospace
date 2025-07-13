@@ -23,5 +23,5 @@ val SystemRed = Color(0xFFFF6B6B)       // For errors
 val SystemGreen = Color(0xFF4CAF50)     // For success states
 
 // markdown header colours
-val MarkdownHeading = Color(0xFF2E7D32) // Dark green for light theme
+val MarkdownHeading = Color(0xFF2887c8) // Dark green for light theme
 val MarkdownHeadingDark = Color(0xFF81C784) // Light green for dark theme

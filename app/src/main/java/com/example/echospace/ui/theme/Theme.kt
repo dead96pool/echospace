@@ -30,7 +30,7 @@ private val LightColorScheme = lightColorScheme(
     onSecondaryContainer = TextWhite,
 
     // Tertiary colors - used for accent elements
-    tertiary = LightGrey,
+    tertiary = MarkdownHeading, // Use tertiary for heading color
     onTertiary = TextWhite,
     tertiaryContainer = DarkGrey,
     onTertiaryContainer = TextWhite,
@@ -42,7 +42,7 @@ private val LightColorScheme = lightColorScheme(
     // Surface colors - for cards, dialogs, etc.
     surface = TextWhite,
     onSurface = TextBlack,
-    surfaceVariant = Color(0xFFF0F0F0),
+    surfaceVariant = Color(0xFFEFEFEF),
     onSurfaceVariant = TextBlack,
 
     // System colors
@@ -67,7 +67,7 @@ private val DarkColorScheme = darkColorScheme(
     onSecondaryContainer = TextBlack,
 
     // Tertiary colors - used for accent elements
-    tertiary = MediumWhite,
+    tertiary = MarkdownHeadingDark, // Use tertiary for heading color
     onTertiary = TextBlack,
     tertiaryContainer = AlmostWhite,
     onTertiaryContainer = TextBlack,
@@ -79,7 +79,7 @@ private val DarkColorScheme = darkColorScheme(
     // Surface colors - for cards, dialogs, etc.
     surface = Color(0xFF1E1E1E),
     onSurface = TextWhite,
-    surfaceVariant = Color(0xFF2C2C2C),
+    surfaceVariant = Color(0xFF2F2F2F),
     onSurfaceVariant = TextWhite,
 
     // System colors

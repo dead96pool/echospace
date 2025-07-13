@@ -21,3 +21,7 @@ val TextWhite = Color(0xFFFFFFFF)       // White text for dark backgrounds
 val SystemBlue = Color(0xFF2196F3)      // For links, selections
 val SystemRed = Color(0xFFFF6B6B)       // For errors
 val SystemGreen = Color(0xFF4CAF50)     // For success states
+
+// markdown header colours
+val MarkdownHeading = Color(0xFF2E7D32) // Dark green for light theme
+val MarkdownHeadingDark = Color(0xFF81C784) // Light green for dark theme

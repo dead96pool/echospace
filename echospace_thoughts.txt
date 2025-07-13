@@ -1,12 +1,13 @@
 basic functionality:
 - pull to refresh
 - files with wordcount and last modified metadata
-- auto add hashtags in file content
 - Search functionality including content
 - virtual File organization/folders using hashtags
+- auto add hashtags in file content
 - Export/import features
-- Rich text editing perhaps using markdown parser
 - Backup/sync capabilities
+- sorting based on name and modified date
+- maybe change the formatstyle for the file hashtag in view mode
 
 
 - wordcount to ignore the markdown formating symbols
@@ -14,7 +15,6 @@ basic functionality:
 - fix rotation causing the create new file dialog close, exising out of editing mode and removing the files from the homescreen
 - topbar dropdown or settings screen for theme/sorting options
 - better sorting dropdown menu UI
-- better delete and rename dropdown UI ( slide mechanics to show options)
 - highlight text for format editing maybe
 - hardware support for keyboard
 - double and single quote support
@@ -23,13 +23,10 @@ basic functionality:
 - last modified should change if file edited outside the app
 - search can be non sequential just looking for keywords / better content search algorithm 
 - content or title hashmaps for better search optimisation
-- option for private folder (using the # folder tag maybe)
+- option for private folder (using the #enc folder tag maybe)
 - UI for folder classification apart from the hashtags
-- maybe import markdown libraries to have a better parser
-- correct the colours theme.kt file to standardise the colours used
 - select multiple files to delete them together (but not folders, delete option should not show up)
 - better animation for opening files/folders like a zoom in effect instead of screen swipe.
-- text selection autoscrolling
 - test edge cases
 
 
@@ -40,10 +37,8 @@ future features:
 - cloud sync
 - db to store the notes
 - possible summary of the notes to include in the filelist screen
-- better colour consistencies between ui text, icons and buttons
-- better colour selection for heading like a colourwheel
-- more selection for typeface fonts
-- maybe change the formatstyle for the file hashtag in view mode
+- better colour selection for heading like a colourwheel (colour user selection)
+- more selection for typeface fonts (font user selection)
 - speech to text
 - AI summary to search for long forgotten notes
 - setting reminders as alarms for certain notes
@@ -61,4 +56,3 @@ potentially current future ideas:
 - Add a simple toolbar with buttons to easily insert markdown syntax (e.g., apply bold, create a heading, insert a bullet point)
 - Expand your parser to support checklists [ ] / [x]
 - When a user types #, suggest existing tags/folder paths.
-- export notes to backup as zip

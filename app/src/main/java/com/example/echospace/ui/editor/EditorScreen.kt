@@ -30,6 +30,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
+import com.example.echospace.ui.components.MarkdownText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -221,23 +222,13 @@ fun EditorScreen(
                         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
                     )
                 } else {
-                    CompositionLocalProvider(
-                        LocalTextSelectionColors provides TextSelectionColors(
-                            handleColor = MaterialTheme.colorScheme.primary,
-                            backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                        )
-                    ) {
-                        SelectionContainer {
-                            Text(
-                                text = content,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .verticalScroll(readScrollState)
-                            )
-                        }
-                    }
+                    // Read-only mode with markdown parsing
+                    MarkdownText(
+                        text = content,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(readScrollState)
+                    )
                 }
             }
         }

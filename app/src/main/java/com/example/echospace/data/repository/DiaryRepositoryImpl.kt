@@ -4,6 +4,7 @@ package com.example.echospace.data.repository
 
 import androidx.documentfile.provider.DocumentFile
 import com.example.echospace.data.local.FileManager
+import com.example.echospace.data.local.FileOperationResult
 import com.example.echospace.domain.model.DiaryEntry
 import com.example.echospace.domain.repository.DiaryRepository
 
@@ -25,10 +26,6 @@ class DiaryRepositoryImpl(
         return fileManager.readFile(file)
     }
 
-    override suspend fun writeContent(file: DocumentFile, content: String) {
-        fileManager.writeFile(file, content)
-    }
-
     override suspend fun deleteEntry(entry: DiaryEntry): Boolean {
         return fileManager.deleteFile(entry.file)
     }
@@ -36,5 +33,10 @@ class DiaryRepositoryImpl(
     override suspend fun renameEntry(entry: DiaryEntry, newName: String): DiaryEntry? {
         val newFile = fileManager.renameFile(entry.file, newName)
         return newFile?.let { DiaryEntry(it, newName) }
+    }
+
+    // Update this method to use backup-protected saving
+    override suspend fun saveEntry(file: DocumentFile, content: String): FileOperationResult {
+        return fileManager.saveFileWithBackup(file, content)
     }
 }

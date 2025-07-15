@@ -10,11 +10,14 @@ import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.FileOutputStream
+import android.util.Log
+import javax.inject.Inject
 
 class FileAlreadyExistsException(message: String) : Exception(message)
 
-class FileManager(private val context: Context) {
+class FileManager @Inject constructor(
+    private val context: Context
+) {
 
     private val sharedPrefs = context.getSharedPreferences("echospace_prefs", Context.MODE_PRIVATE)
 
@@ -59,19 +62,6 @@ class FileManager(private val context: Context) {
         } catch (e: Exception) { "" }
     }
 
-    suspend fun writeFile(file: DocumentFile, content: String): Boolean = withContext(Dispatchers.IO) {
-        try {
-            context.contentResolver.openFileDescriptor(file.uri, "wt")?.use { pfd ->
-                FileOutputStream(pfd.fileDescriptor).use {
-                    it.write(content.toByteArray(Charsets.UTF_8))
-                    it.flush() // Ensure content is written
-                }
-                pfd.close()
-            }
-            true
-        } catch (e: Exception) { false }
-    }
-
     suspend fun deleteFile(file: DocumentFile): Boolean = withContext(Dispatchers.IO) {
         return@withContext file.delete()
     }
@@ -92,6 +82,92 @@ class FileManager(private val context: Context) {
             folder.findFile("$newName.txt")
         } else {
             null
+        }
+    }
+
+    /**
+     * Creates a temporary backup of a file before editing
+     */
+    private suspend fun createBackup(originalFile: DocumentFile): DocumentFile? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val backupName = "${originalFile.name}.backup"
+                val parentDir = originalFile.parentFile ?: return@withContext null
+
+                // Create backup file
+                val backupFile = parentDir.createFile("text/plain", backupName)
+
+                if (backupFile != null) {
+                    // Copy original content to backup
+                    context.contentResolver.openInputStream(originalFile.uri)?.use { input ->
+                        context.contentResolver.openOutputStream(backupFile.uri)?.use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    backupFile
+                } else null
+            } catch (e: Exception) {
+                Log.e("FileManager", "Failed to create backup", e)
+                null
+            }
+        }
+    }
+
+    /**
+     * Restores content from backup file
+     */
+    private suspend fun restoreFromBackup(originalFile: DocumentFile, backupFile: DocumentFile): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                context.contentResolver.openInputStream(backupFile.uri)?.use { input ->
+                    context.contentResolver.openOutputStream(originalFile.uri, "wt")?.use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                true
+            } catch (e: Exception) {
+                Log.e("FileManager", "Failed to restore from backup", e)
+                false
+            }
+        }
+    }
+
+    /**
+     * Safely saves content to a file with backup protection
+     */
+    suspend fun saveFileWithBackup(file: DocumentFile, content: String): FileOperationResult {
+        return withContext(Dispatchers.IO) {
+            try {
+                // Step 1: Create backup of original file
+                val backupFile = createBackup(file)
+
+                try {
+                    // Step 2: Write new content to original file
+                    context.contentResolver.openOutputStream(file.uri, "wt")?.use { outputStream ->
+                        outputStream.write(content.toByteArray())
+                        outputStream.flush()
+                    }
+
+                    // Step 3: If successful, delete backup
+                    backupFile?.delete()
+
+                    FileOperationResult.Success
+                } catch (writeException: Exception) {
+                    // Step 4: If write failed, restore from backup
+                    backupFile?.let { backup ->
+                        val restored = restoreFromBackup(file, backup)
+                        backup.delete()
+
+                        if (!restored) {
+                            Log.e("FileManager", "Failed to restore backup after write failure")
+                        }
+                    }
+
+                    FileOperationResult.Error("Failed to save file: ${writeException.message}")
+                }
+            } catch (e: Exception) {
+                FileOperationResult.Error("File operation failed: ${e.message}")
+            }
         }
     }
 }

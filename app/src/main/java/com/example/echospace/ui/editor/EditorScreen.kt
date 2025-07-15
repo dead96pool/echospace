@@ -16,6 +16,8 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 //import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +35,8 @@ import androidx.documentfile.provider.DocumentFile
 import com.example.echospace.ui.components.MarkdownText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+//import android.util.Log
+//import androidx.compose.runtime.saveable.rememberSaveable
 
 @Composable
 fun EditorScreen(
@@ -42,6 +46,7 @@ fun EditorScreen(
     initialContent: String? = null
 ) {
     val content by viewModel.content.collectAsState()
+
     var isEditMode by remember { mutableStateOf(startInEditMode) }
     var textFieldValue by remember { mutableStateOf(TextFieldValue()) }
 
@@ -61,7 +66,7 @@ fun EditorScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // This effect now correctly calls the new suspend function
+    // effect calls the initial content only once
     LaunchedEffect(initialContent) {
         if (initialContent != null) {
             // This is a new file: set its content and save it immediately
@@ -193,11 +198,9 @@ fun EditorScreen(
                         onTextLayout = { layoutResult ->
                             if (textFieldValue.selection.start >= 0) {
                                 val cursorRect = layoutResult.getCursorRect(textFieldValue.selection.start)
-
                                 val adjustedRect = cursorRect.copy(
                                     bottom = cursorRect.bottom + bufferPx
                                 )
-
                                 scope.launch {
                                     bringIntoViewRequester.bringIntoView(adjustedRect)
                                 }

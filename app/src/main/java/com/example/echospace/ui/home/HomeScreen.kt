@@ -117,7 +117,6 @@ fun HomeScreen(
     }
 
     // --- Dialog Implementations ---
-    // These are now correctly placed within the scope of the HomeScreen composable
 
     if (showCreateDialog) {
         CreateEntryDialog(

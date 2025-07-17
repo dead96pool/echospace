@@ -6,16 +6,24 @@ import androidx.documentfile.provider.DocumentFile
 import com.example.echospace.data.local.FileManager
 import com.example.echospace.data.local.FileOperationResult
 import com.example.echospace.domain.model.DiaryEntry
+import com.example.echospace.domain.model.SortOption
 import com.example.echospace.domain.repository.DiaryRepository
+import javax.inject.Inject
 
-class DiaryRepositoryImpl(
+class DiaryRepositoryImpl @Inject constructor(
     private val fileManager: FileManager
 ) : DiaryRepository {
 
-    override suspend fun getEntries(): List<DiaryEntry> {
-        return fileManager.getFiles()
+    override suspend fun getEntries(sortOption: SortOption): List<DiaryEntry> {
+        val entries = fileManager.getFiles()
             .map { DiaryEntry(file = it, name = it.name?.removeSuffix(".txt") ?: "Untitled") }
-            .sortedByDescending { it.file.lastModified() }
+
+        return when (sortOption) {
+            SortOption.NAME_ASC -> entries.sortedBy { it.name.lowercase() }
+            SortOption.NAME_DESC -> entries.sortedByDescending { it.name.lowercase() }
+            SortOption.DATE_NEWEST -> entries.sortedByDescending { it.file.lastModified() }
+            SortOption.DATE_OLDEST -> entries.sortedBy { it.file.lastModified() }
+        }
     }
 
     override suspend fun createEntry(fileName: String): DocumentFile? {
@@ -35,7 +43,6 @@ class DiaryRepositoryImpl(
         return newFile?.let { DiaryEntry(it, newName) }
     }
 
-    // Update this method to use backup-protected saving
     override suspend fun saveEntry(file: DocumentFile, content: String): FileOperationResult {
         return fileManager.saveFileWithBackup(file, content)
     }

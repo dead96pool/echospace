@@ -1,4 +1,6 @@
 basic functionality:
+- add a red notification icon in the file already exist red error
+- new files created are not case sensitive so new file names contain "Test (1)"
 - pull to refresh
 - files with wordcount and last modified metadata
 - Search functionality including content
@@ -6,10 +8,10 @@ basic functionality:
 - auto add hashtags in file content
 - Export/import features
 - Backup/sync capabilities
-- sorting based on name and modified date
 - maybe change the formatstyle for the file hashtag in view mode
 
 
+-sorting should work for virtual folders as well
 - wordcount to ignore the markdown formating symbols
 - hilt making the changes not being saved to the file
 - fix rotation causing the create new file dialog close, exising out of editing mode and removing the files from the homescreen
@@ -56,3 +58,27 @@ potentially current future ideas:
 - Add a simple toolbar with buttons to easily insert markdown syntax (e.g., apply bold, create a heading, insert a bullet point)
 - Expand your parser to support checklists [ ] / [x]
 - When a user types #, suggest existing tags/folder paths.
+
+
+
+-------------------------------------------------------------------------
+-------------------------------------------------------------------------
+
+user selection of header color:
+
+enum class HeaderColor(val displayName: String, val color: Color) {
+    EchoBlue("Echo Blue", Color(0xFF2887C8)),
+    SunsetOrange("Sunset Orange", Color(0xFFFF8552)),
+    AmberGold("Amber Gold", Color(0xFFF4C430)),
+    TealGreen("Teal Green", Color(0xFF2AA889)),
+    IndigoPurple("Indigo Purple", Color(0xFF6C63FF)),
+    RosePink("Rose Pink", Color(0xFFE65C9C))
+}
+Echo Blue	#2887C8	Your current default, balanced and clean
+Sunset Orange	#FF8552	Soft, energetic orange (warmer than red)
+Amber Gold	#F4C430	Modern yellow/gold, warm and visible
+Teal Green	#2AA889	Relaxing greenish-teal, calm and clean
+Indigo Purple	#6C63FF	Creative and elegant, works on both themes
+Rose Pink	#E65C9C	Friendly and expressive without clashing
+Slate Gray	#708090	Muted and professional, low contrast option
+Lavender Blue	#8DA9C4	Cool and soft, pairs well with dark/bright UIs

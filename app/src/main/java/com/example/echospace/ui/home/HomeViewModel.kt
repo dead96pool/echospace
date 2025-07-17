@@ -6,32 +6,62 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.echospace.data.local.FileAlreadyExistsException
+import com.example.echospace.data.preferences.ThemePreferences
 import com.example.echospace.domain.model.DiaryEntry
+import com.example.echospace.domain.model.SortOption
 import com.example.echospace.domain.repository.DiaryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val diaryRepository: DiaryRepository
+    private val diaryRepository: DiaryRepository,
+    private val themePreferences: ThemePreferences
 ) : ViewModel() {
 
     private val _entries = MutableStateFlow<List<DiaryEntry>>(emptyList())
-    val entries = _entries.asStateFlow()
+    val entries: StateFlow<List<DiaryEntry>> = _entries.asStateFlow()
 
     private val _renameError = MutableStateFlow<String?>(null)
-    val renameError = _renameError.asStateFlow()
+    val renameError: StateFlow<String?> = _renameError.asStateFlow()
 
     // Add state for creation errors
     private val _createError = MutableStateFlow<String?>(null)
-    val createError = _createError.asStateFlow()
+    val createError: StateFlow<String?> = _createError.asStateFlow()
 
-    fun loadEntries() {
+    val sortOption: StateFlow<SortOption> = themePreferences.sortOption
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = SortOption.DATE_NEWEST
+        )
+
+    init {
+        // Load entries whenever sort option changes
         viewModelScope.launch {
-            _entries.value = diaryRepository.getEntries()
+            sortOption.collect { sortOption ->
+                loadEntries(sortOption)
+            }
+        }
+    }
+
+    fun loadEntries(sortOption: SortOption? = null) {
+        viewModelScope.launch {
+            val currentSort = sortOption ?: this@HomeViewModel.sortOption.value
+            _entries.value = diaryRepository.getEntries(currentSort)
+        }
+    }
+
+    fun setSortOption(sortOption: SortOption) {
+        viewModelScope.launch {
+            themePreferences.setSortOption(sortOption)
         }
     }
 

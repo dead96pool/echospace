@@ -3,9 +3,12 @@ package com.example.echospace.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
+//import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.*
+//import androidx.compose.runtime.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,7 +26,8 @@ fun SlimTopBar(
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     showBottomShadow: Boolean = true,
     isDarkTheme: Boolean = false,
-    onThemeToggle: () -> Unit = {}
+    onThemeToggle: () -> Unit = {},
+    onSortClick: () -> Unit
 ) {
     Column(
         modifier = modifier
@@ -60,6 +64,19 @@ fun SlimTopBar(
                     Icon(
                         imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
                         contentDescription = if (isDarkTheme) "Switch to Light Mode" else "Switch to Dark Mode",
+                        tint = contentColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                // sort button
+                IconButton(
+                    onClick = onSortClick,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Sort,
+                        contentDescription = "Sort Files",
                         tint = contentColor,
                         modifier = Modifier.size(20.dp)
                     )

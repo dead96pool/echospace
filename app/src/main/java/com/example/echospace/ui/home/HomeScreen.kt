@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.echospace.domain.model.DiaryEntry
+import com.example.echospace.ui.components.*
 import com.example.echospace.ui.components.CreateEntryDialog
 import com.example.echospace.ui.components.RenameEntryDialog
 import com.example.echospace.ui.components.SlimTopBar
@@ -33,8 +34,11 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val entries by viewModel.entries.collectAsState()
+    val sortOption by viewModel.sortOption.collectAsState()
     val isDarkTheme by themeViewModel.isDarkTheme.collectAsState()
+
     var showCreateDialog by remember { mutableStateOf(false) }
+    var showSortBottomSheet by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
     var revealedEntryId by remember { mutableStateOf<String?>(null) }
@@ -66,7 +70,8 @@ fun HomeScreen(
             SlimTopBar(
                 title = "EchoSpace",
                 isDarkTheme = isDarkTheme,
-                onThemeToggle = { themeViewModel.toggleTheme() }
+                onThemeToggle = { themeViewModel.toggleTheme() },
+                onSortClick = { showSortBottomSheet = true }
             )
         },
         floatingActionButton = {
@@ -117,6 +122,17 @@ fun HomeScreen(
     }
 
     // --- Dialog Implementations ---
+
+    // Sort Bottom Sheet
+    if (showSortBottomSheet) {
+        SortBottomSheet(
+            currentSortOption = sortOption,
+            onSortOptionSelected = { newSortOption ->
+                viewModel.setSortOption(newSortOption)
+            },
+            onDismiss = { showSortBottomSheet = false }
+        )
+    }
 
     if (showCreateDialog) {
         CreateEntryDialog(

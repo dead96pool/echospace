@@ -1,7 +1,6 @@
 // ui/components/SortBottomSheet.kt
 package com.example.echospace.ui.components
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup

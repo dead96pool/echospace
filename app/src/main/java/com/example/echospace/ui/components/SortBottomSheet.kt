@@ -1,6 +1,7 @@
 // ui/components/SortBottomSheet.kt
 package com.example.echospace.ui.components
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -11,15 +12,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import com.example.echospace.domain.model.SortOption
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
+import android.util.Log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SortBottomSheet(
+    isDarkTheme: Boolean,
     currentSortOption: SortOption,
     onSortOptionSelected: (SortOption) -> Unit,
     onDismiss: () -> Unit,
@@ -29,6 +35,15 @@ fun SortBottomSheet(
         onDismissRequest = onDismiss,
         modifier = modifier
     ) {
+        // This is the workaround you found
+        val view = LocalView.current
+        (view.parent as? DialogWindowProvider)?.window?.let { window ->
+            SideEffect {
+                Log.d("BottomSheetThemeCheck", "isSystemInDarkTheme value is: $isDarkTheme")
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !isDarkTheme
+            }
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -41,7 +56,7 @@ fun SortBottomSheet(
             )
 
             Column(modifier = Modifier.selectableGroup()) {
-                SortOption.values().forEach { sortOption ->
+                SortOption.entries.forEach { sortOption ->
                     SortOptionItem(
                         sortOption = sortOption,
                         isSelected = currentSortOption == sortOption,
@@ -93,7 +108,7 @@ private fun SortOptionItem(
 
         Text(
             text = sortOption.displayName,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f)
         )
     }

@@ -126,6 +126,7 @@ fun HomeScreen(
     // Sort Bottom Sheet
     if (showSortBottomSheet) {
         SortBottomSheet(
+            isDarkTheme = isDarkTheme,
             currentSortOption = sortOption,
             onSortOptionSelected = { newSortOption ->
                 viewModel.setSortOption(newSortOption)

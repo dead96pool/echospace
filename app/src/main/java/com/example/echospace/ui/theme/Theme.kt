@@ -3,7 +3,6 @@
 package com.example.echospace.ui.theme
 
 import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -11,7 +10,6 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
@@ -100,38 +98,16 @@ fun EchoSpaceTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
+
+            // Tell the system that the app will handle drawing behind the system bars
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+
+            // Get the insets controller to manage icon colors
             val insetsController = WindowCompat.getInsetsController(window, view)
 
-            // Handle system bar styling based on Android version
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-                // Android 15+ - Use edge-to-edge approach
-                // System bars become transparent, content draws behind them
-                WindowCompat.setDecorFitsSystemWindows(window, false)
-
-                // Set appearance for system bar icons/text
-                insetsController.isAppearanceLightStatusBars = !darkTheme
-                insetsController.isAppearanceLightNavigationBars = !darkTheme
-
-            } else {
-                // Android 14 and below - Use traditional approach
-                @Suppress("DEPRECATION")
-                window.statusBarColor = if (darkTheme) {
-                    Color(0xFF121212).toArgb()
-                } else {
-                    TextWhite.toArgb()
-                }
-
-                @Suppress("DEPRECATION")
-                window.navigationBarColor = if (darkTheme) {
-                    Color(0xFF121212).toArgb()
-                } else {
-                    TextWhite.toArgb()
-                }
-
-                // Set icon colors for system bars
-                insetsController.isAppearanceLightStatusBars = !darkTheme
-                insetsController.isAppearanceLightNavigationBars = !darkTheme
-            }
+            // Dynamically set the status bar and navigation bar icon colors
+            insetsController.isAppearanceLightStatusBars = !darkTheme
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
         }
     }
 

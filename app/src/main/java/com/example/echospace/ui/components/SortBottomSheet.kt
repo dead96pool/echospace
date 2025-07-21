@@ -19,7 +19,6 @@ import androidx.core.view.WindowCompat
 import com.example.echospace.domain.model.SortOption
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
-import android.util.Log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,7 +37,6 @@ fun SortBottomSheet(
         val view = LocalView.current
         (view.parent as? DialogWindowProvider)?.window?.let { window ->
             SideEffect {
-                Log.d("BottomSheetThemeCheck", "isSystemInDarkTheme value is: $isDarkTheme")
                 WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !isDarkTheme
             }
         }

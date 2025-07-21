@@ -68,9 +68,6 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.documentfile)
-    //implementation(libs.reveal.swipe)
-    //implementation(libs.accompanist.swiperefresh)
-    // Remove accompanist-systemuicontroller implementation
 
     // Hilt (now using version catalog aliases)
     implementation(libs.google.hilt.android)

@@ -158,7 +158,8 @@ fun HomeScreen(
                     }
                 }
             },
-            errorMessage = createError
+            errorMessage = createError,
+            onErrorClear = viewModel::clearCreateError
         )
     }
 

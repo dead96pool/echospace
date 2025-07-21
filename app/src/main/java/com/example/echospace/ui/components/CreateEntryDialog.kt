@@ -7,6 +7,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Modifier
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material3.Icon
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -14,7 +17,8 @@ import java.util.*
 fun CreateEntryDialog(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
-    errorMessage: String?
+    errorMessage: String?,
+    onErrorClear: () -> Unit = {}
 ) {
     var text by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
@@ -30,12 +34,27 @@ fun CreateEntryDialog(
         text = {
             OutlinedTextField(
                 value = text,
-                onValueChange = { text = it },
+                onValueChange = { newText ->
+                    text = newText
+                    // Clear error when user starts typing
+                    if (isError && newText.isNotEmpty()) {
+                        onErrorClear()
+                    }
+                },
                 label = { Text("File Name") },
                 modifier = Modifier.focusRequester(focusRequester),
                 singleLine = true,
-                placeholder = { Text("Leave empty for Auto Name") },
+                placeholder = { Text("Empty for Auto Name") },
                 isError = isError, // Highlights the field in red
+                trailingIcon = {
+                    if (isError) {
+                        Icon(
+                            imageVector = Icons.Default.Error,
+                            contentDescription = "Error",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
                 supportingText = {
                     // Displays the error message below the field
                     if (isError) {

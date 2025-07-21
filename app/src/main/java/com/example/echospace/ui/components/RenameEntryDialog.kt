@@ -1,5 +1,7 @@
 package com.example.echospace.ui.components
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.focus.FocusRequester
@@ -49,6 +51,15 @@ fun RenameEntryDialog(
                 modifier = Modifier.focusRequester(focusRequester),
                 singleLine = true,
                 isError = isError, // Highlight field in red when error exists
+                trailingIcon = {
+                    if (isError) {
+                        Icon(
+                            imageVector = Icons.Default.Error,
+                            contentDescription = "Error",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
                 supportingText = {
                     // Display error message below the field
                     if (isError) {

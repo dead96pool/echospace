@@ -68,6 +68,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.documentfile)
+    // Pull-to-refresh (if not already included in your Compose BOM)
+    implementation(libs.androidx.material3.window.size.class1)
 
     // Hilt (now using version catalog aliases)
     implementation(libs.google.hilt.android)

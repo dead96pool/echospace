@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 //import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import javax.inject.Inject
 
 @HiltViewModel
@@ -35,6 +36,11 @@ class HomeViewModel @Inject constructor(
     // Add state for creation errors
     private val _createError = MutableStateFlow<String?>(null)
     val createError: StateFlow<String?> = _createError.asStateFlow()
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+    private val _refreshResult = MutableStateFlow<RefreshResult?>(null)
+    val refreshResult: StateFlow<RefreshResult?> = _refreshResult.asStateFlow()
 
     val sortOption: StateFlow<SortOption> = themePreferences.sortOption
         .stateIn(
@@ -107,4 +113,49 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Refreshes the file list and metadata
+     */
+    fun refreshFiles() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+
+            try {
+                val currentSort = sortOption.value
+                val previousEntries = _entries.value
+
+                // Refresh entries with current sort order
+                val refreshedEntries = diaryRepository.getEntries(currentSort)
+                _entries.value = refreshedEntries
+
+                // Calculate refresh statistics
+                val refreshCount = refreshedEntries.size
+                val newFiles = refreshedEntries.size - previousEntries.size
+
+                _refreshResult.value = RefreshResult.Success(refreshCount, newFiles)
+
+                // Brief delay to show refresh indicator
+                delay(500)
+
+            } catch (e: Exception) {
+                _refreshResult.value = RefreshResult.Error("Failed to refresh: ${e.message}")
+            } finally {
+                _isRefreshing.value = false
+
+                // Clear result after showing
+                delay(3000)
+                _refreshResult.value = null
+            }
+        }
+    }
+
+    fun clearRefreshResult() {
+        _refreshResult.value = null
+    }
+
+}
+
+sealed class RefreshResult {
+    data class Success(val totalFiles: Int, val newFiles: Int) : RefreshResult()
+    data class Error(val message: String) : RefreshResult()
 }

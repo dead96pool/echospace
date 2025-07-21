@@ -7,12 +7,18 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.echospace.domain.model.DiaryEntry
 import com.example.echospace.ui.components.*
@@ -27,6 +33,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
@@ -36,6 +43,13 @@ fun HomeScreen(
     val entries by viewModel.entries.collectAsState()
     val sortOption by viewModel.sortOption.collectAsState()
     val isDarkTheme by themeViewModel.isDarkTheme.collectAsState()
+
+    // refresh state
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val refreshResult by viewModel.refreshResult.collectAsState()
+    val pullToRefreshState = rememberPullToRefreshState()
+    // Snackbar state
+    val snackbarHostState = remember { SnackbarHostState() }
 
     var showCreateDialog by remember { mutableStateOf(false) }
     var showSortBottomSheet by remember { mutableStateOf(false) }
@@ -56,6 +70,31 @@ fun HomeScreen(
         viewModel.loadEntries() // Refresh the list when returning from editor
     }
 
+    // Handle refresh result with snackbar
+    LaunchedEffect(refreshResult) {
+        refreshResult?.let { result ->
+            when (result) {
+                is RefreshResult.Success -> {
+                    val message = if (result.newFiles > 0) {
+                        "${result.totalFiles} files refreshed (${result.newFiles} new)"
+                    } else {
+                        "${result.totalFiles} files refreshed"
+                    }
+                    snackbarHostState.showSnackbar(
+                        message = message,
+                        duration = SnackbarDuration.Short
+                    )
+                }
+                is RefreshResult.Error -> {
+                    snackbarHostState.showSnackbar(
+                        message = result.message,
+                        duration = SnackbarDuration.Long
+                    )
+                }
+            }
+        }
+    }
+
     // Handle system back button - close swipe if revealed
     BackHandler(enabled = revealedEntryId != null) {
         revealedEntryId = null
@@ -70,9 +109,40 @@ fun HomeScreen(
             SlimTopBar(
                 title = "EchoSpace",
                 isDarkTheme = isDarkTheme,
-                onThemeToggle = { themeViewModel.toggleTheme() },
+                onThemeToggle = themeViewModel::toggleTheme,
                 onSortClick = { showSortBottomSheet = true }
             )
+        },
+        snackbarHost = {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    snackbar = { data ->
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            tonalElevation = 6.dp,
+                            shadowElevation = 6.dp,
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier
+                                .wrapContentWidth()
+                                .widthIn(max = 360.dp)
+                                .defaultMinSize(minWidth = 160.dp)
+                                .padding(bottom = 32.dp)
+                        ) {
+                            Text(
+                                text = data.visuals.message,
+                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                )
+            }
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -85,38 +155,49 @@ fun HomeScreen(
             }
         }
     ) { padding ->
-        LazyColumn(
+        // Wrap LazyColumn with PullToRefreshBox
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                // Dismiss any revealed swipe actions
+                revealedEntryId = null
+                viewModel.refreshFiles()
+            },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(horizontal = 4.dp)
+            state = pullToRefreshState
         ) {
-            items(entries, key = { it.file.uri }) { entry ->
-                val isRevealed = revealedEntryId == entry.file.uri.toString()
+            LazyColumn(
+                contentPadding = PaddingValues(horizontal = 4.dp)
+            ) {
+                items(entries, key = { it.file.uri }) { entry ->
+                    val isRevealed = revealedEntryId == entry.file.uri.toString()
 
-                SwipeableDiaryListItem(
-                    entry = entry,
-                    onItemClick = {
-                        revealedEntryId = null
-                        val intent = Intent(context, EditorActivity::class.java).apply {
-                            putExtra("file_uri", entry.file.uri.toString())
+                    SwipeableDiaryListItem(
+                        entry = entry,
+                        onItemClick = {
+                            revealedEntryId = null
+                            val intent = Intent(context, EditorActivity::class.java).apply {
+                                putExtra("file_uri", entry.file.uri.toString())
+                            }
+                            editorLauncher.launch(intent)
+                        },
+                        onRename = {
+                            entryToRename = entry
+                            revealedEntryId = null
+                        },
+                        onDelete = {
+                            entryToDelete = entry
+                            revealedEntryId = null
+                        },
+                        isRevealed = isRevealed,
+                        onRevealChange = { shouldReveal ->
+                            revealedEntryId = if (shouldReveal) entry.file.uri.toString() else null
                         }
-                        editorLauncher.launch(intent)
-                    },
-                    onRename = {
-                        entryToRename = entry
-                        revealedEntryId = null // Hide after action
-                    },
-                    onDelete = {
-                        entryToDelete = entry
-                        revealedEntryId = null // Hide after action
-                    },
-                    isRevealed = isRevealed,
-                    onRevealChange = { shouldReveal ->
-                        revealedEntryId = if (shouldReveal) entry.file.uri.toString() else null
-                    }
-                )
-                //HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                    )
+                    //HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                }
             }
         }
     }

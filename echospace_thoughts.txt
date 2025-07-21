@@ -1,7 +1,4 @@
 basic functionality:
-- add a red notification icon in the file already exist red error
-- new files created are not case sensitive so new file names contain "Test (1)"
-- pull to refresh
 - files with wordcount and last modified metadata
 - Search functionality including content
 - virtual File organization/folders using hashtags

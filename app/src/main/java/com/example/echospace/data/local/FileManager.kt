@@ -42,17 +42,21 @@ class FileManager @Inject constructor(
         folder.listFiles().filter { it.isFile && it.name?.endsWith(".txt") == true }
     }
 
-    suspend fun createFile(fileName: String): DocumentFile? = withContext(Dispatchers.IO) {
-        val folderUri = getFolderUri() ?: return@withContext null
-        val folder = DocumentFile.fromTreeUri(context, folderUri) ?: return@withContext null
-        val existingFile = folder.findFile("$fileName.txt")
-        if (existingFile != null) {
-            // Throw the custom exception
-            throw FileAlreadyExistsException("File '$fileName.txt' already exists")
-        }
-        folder.createFile("text/plain", "$fileName.txt")
-    }
+    suspend fun createFile(fileName: String): DocumentFile? {
+        return withContext(Dispatchers.IO) {
+            val folderUri = getFolderUri() ?: return@withContext null
+            val folder = DocumentFile.fromTreeUri(context, folderUri) ?: return@withContext null
 
+            // Use case-insensitive check
+            val existingFile = findFileIgnoreCase(folder, fileName)
+            if (existingFile != null) {
+                // Throw the custom exception
+                throw FileAlreadyExistsException("File ${fileName}.txt already exists")
+            }
+
+            folder.createFile("text/plain", "$fileName.txt")
+        }
+    }
 
     suspend fun readFile(file: DocumentFile): String = withContext(Dispatchers.IO) {
         try {
@@ -66,22 +70,24 @@ class FileManager @Inject constructor(
         return@withContext file.delete()
     }
 
-    suspend fun renameFile(file: DocumentFile, newName: String): DocumentFile? = withContext(Dispatchers.IO) {
-        val folderUri = getFolderUri() ?: return@withContext null
-        val folder = DocumentFile.fromTreeUri(context, folderUri) ?: return@withContext null
+    suspend fun renameFile(file: DocumentFile, newName: String): DocumentFile? {
+        return withContext(Dispatchers.IO) {
+            val folderUri = getFolderUri() ?: return@withContext null
+            val folder = DocumentFile.fromTreeUri(context, folderUri) ?: return@withContext null
 
-        // Check if a file with the new name already exists
-        val existingFile = folder.findFile("$newName.txt")
-        if (existingFile != null && existingFile.uri != file.uri) {
-            // Throw the same exception used for create operations
-            throw FileAlreadyExistsException("File '$newName.txt' already exists")
-        }
+            // Use case-insensitive check
+            val existingFile = findFileIgnoreCase(folder, newName)
+            if (existingFile != null && existingFile.uri != file.uri) {
+                // Throw the same exception used for create operations
+                throw FileAlreadyExistsException("File ${newName}.txt already exists")
+            }
 
-        if (file.renameTo("$newName.txt")) {
-            // After renaming, get the new DocumentFile object
-            folder.findFile("$newName.txt")
-        } else {
-            null
+            if (file.renameTo("$newName.txt")) {
+                // After renaming, get the new DocumentFile object
+                folder.findFile("$newName.txt")
+            } else {
+                null
+            }
         }
     }
 
@@ -170,4 +176,15 @@ class FileManager @Inject constructor(
             }
         }
     }
+
+    /**
+     * Finds a file with case-insensitive name matching
+     */
+    private fun findFileIgnoreCase(folder: DocumentFile, fileName: String): DocumentFile? {
+        val targetName = "$fileName.txt".lowercase()
+        return folder.listFiles().find { file ->
+            file.name?.lowercase() == targetName
+        }
+    }
+
 }

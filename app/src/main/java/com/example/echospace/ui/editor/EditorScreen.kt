@@ -7,18 +7,14 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-//import androidx.compose.foundation.text.selection.LocalTextSelectionColors
-//import androidx.compose.foundation.text.selection.SelectionContainer
-//import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-//import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -35,8 +31,6 @@ import androidx.documentfile.provider.DocumentFile
 import com.example.echospace.ui.components.MarkdownText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-//import android.util.Log
-//import androidx.compose.runtime.saveable.rememberSaveable
 
 @Composable
 fun EditorScreen(
@@ -169,10 +163,13 @@ fun EditorScreen(
                     } else {
                         isEditMode = true
                     }
-                }
+                },
+                // Add colors parameter for complete control
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.background
             ) {
                 Icon(
-                    if (isEditMode) Icons.Default.Done else Icons.Default.Edit,
+                    if (isEditMode) Icons.Default.Save else Icons.Default.Edit,
                     contentDescription = if (isEditMode) "Save" else "Edit"
                 )
             }

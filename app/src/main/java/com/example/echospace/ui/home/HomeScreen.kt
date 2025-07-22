@@ -9,7 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.automirrored.filled.NoteAdd
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -151,9 +151,15 @@ fun HomeScreen(
                 onClick = {
                     revealedEntryId = null
                     showCreateDialog = true
-                }
+                },
+                // Add colors parameter for complete control
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.background
             ) {
-                Icon(Icons.Default.Add, contentDescription = "New File")
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.NoteAdd,
+                    contentDescription = "New File"
+                )
             }
         }
     ) { padding ->

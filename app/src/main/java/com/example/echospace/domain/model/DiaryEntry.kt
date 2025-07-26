@@ -6,5 +6,7 @@ import androidx.documentfile.provider.DocumentFile
 
 data class DiaryEntry(
     val file: DocumentFile,
-    val name: String
+    val name: String,
+    val wordCount: Int? = null,
+    val lastModifiedDisplay: String? = null
 )

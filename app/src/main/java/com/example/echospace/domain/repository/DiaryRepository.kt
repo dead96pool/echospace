@@ -14,4 +14,5 @@ interface DiaryRepository {
     suspend fun deleteEntry(entry: DiaryEntry): Boolean
     suspend fun renameEntry(entry: DiaryEntry, newName: String): DiaryEntry?
     suspend fun saveEntry(file: DocumentFile, content: String): FileOperationResult
+    suspend fun refreshAllMetadata()
 }

@@ -114,7 +114,8 @@ class HomeViewModel @Inject constructor(
     }
 
     /**
-     * Refreshes the file list and metadata
+     * Enhanced refresh with metadata cache updates
+     * Maintains all existing functionality while adding metadata refresh
      */
     fun refreshFiles() {
         viewModelScope.launch {
@@ -124,17 +125,20 @@ class HomeViewModel @Inject constructor(
                 val currentSort = sortOption.value
                 val previousEntries = _entries.value
 
-                // Refresh entries with current sort order
+                // NEW: Refresh metadata cache first
+                diaryRepository.refreshAllMetadata()
+
+                // Same logic as before: get refreshed entries with current sort order
                 val refreshedEntries = diaryRepository.getEntries(currentSort)
                 _entries.value = refreshedEntries
 
-                // Calculate refresh statistics
+                // Calculate refresh statistics (same as before)
                 val refreshCount = refreshedEntries.size
                 val newFiles = refreshedEntries.size - previousEntries.size
 
                 _refreshResult.value = RefreshResult.Success(refreshCount, newFiles)
 
-                // Brief delay to show refresh indicator
+                // Brief delay to show refresh indicator (same as before)
                 delay(500)
 
             } catch (e: Exception) {
@@ -142,7 +146,7 @@ class HomeViewModel @Inject constructor(
             } finally {
                 _isRefreshing.value = false
 
-                // Clear result after showing
+                // Clear result after showing (same as before)
                 delay(3000)
                 _refreshResult.value = null
             }

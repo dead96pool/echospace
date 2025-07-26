@@ -1,4 +1,6 @@
 basic functionality:
+- colour of sort bottom sheet
+- sort button to function more like toggle
 - files with wordcount and last modified metadata
 - Search functionality including content
 - virtual File organization/folders using hashtags
@@ -13,7 +15,6 @@ basic functionality:
 - hilt making the changes not being saved to the file
 - fix rotation causing the create new file dialog close, exising out of editing mode and removing the files from the homescreen
 - topbar dropdown or settings screen for theme/sorting options
-- better sorting dropdown menu UI
 - highlight text for format editing maybe
 - hardware support for keyboard
 - double and single quote support

@@ -68,6 +68,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.documentfile)
+
     // Pull-to-refresh (if not already included in your Compose BOM)
     implementation(libs.androidx.material3.window.size.class1)
 
@@ -75,6 +76,11 @@ dependencies {
     implementation(libs.google.hilt.android)
     ksp(libs.hilt.compiler) // Use ksp(...) and the alias
     implementation(libs.hilt.navigation.compose) // Use the alias
+
+    // Room dependencies
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)  // Changed from kapt to ksp
 
     // Testing dependencies
     testImplementation(libs.junit)

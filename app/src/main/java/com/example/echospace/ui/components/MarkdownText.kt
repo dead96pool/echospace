@@ -115,7 +115,7 @@ fun MarkdownText(
                         Text(
                             text = MarkdownParser.parseInlineFormatting(element.content, quoteColor),
                             style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(vertical = 8.dp)
+                            //modifier = Modifier.padding(vertical = 8.dp)
                         )
                     }
                 }

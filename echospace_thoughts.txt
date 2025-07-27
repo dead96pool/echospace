@@ -12,7 +12,6 @@ basic functionality:
 
 
 - sorting should work for virtual folders as well
-- wordcount to ignore the markdown formating symbols
 - hilt making the changes not being saved to the file
 - fix rotation causing the create new file dialog close, exising out of editing mode and removing the files from the homescreen
 - topbar dropdown or settings screen for theme/sorting options

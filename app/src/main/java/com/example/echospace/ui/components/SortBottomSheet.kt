@@ -1,9 +1,11 @@
 // ui/components/SortBottomSheet.kt
 package com.example.echospace.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -31,7 +33,20 @@ fun SortBottomSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        modifier = modifier
+        modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.inverseSurface,
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(vertical = 16.dp)
+                    .width(32.dp)
+                    .height(4.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.4f),
+                        shape = RoundedCornerShape(2.dp)
+                    )
+            )
+        }
     ) {
         // This is the workaround you found
         val view = LocalView.current
@@ -89,7 +104,11 @@ private fun SortOptionItem(
     ) {
         RadioButton(
             selected = isSelected,
-            onClick = null
+            onClick = null,
+            colors = RadioButtonDefaults.colors(
+                selectedColor = MaterialTheme.colorScheme.inverseOnSurface,
+                unselectedColor = MaterialTheme.colorScheme.inverseOnSurface
+            )
         )
 
         Spacer(modifier = Modifier.width(12.dp))
@@ -98,7 +117,7 @@ private fun SortOptionItem(
             imageVector = getSortIcon(sortOption),
             contentDescription = null,
             modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.onSurface
+            tint = MaterialTheme.colorScheme.inverseOnSurface
         )
 
         Spacer(modifier = Modifier.width(12.dp))

@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Refresh
 //import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.*
 //import androidx.compose.runtime.*
@@ -27,7 +28,9 @@ fun SlimTopBar(
     showBottomShadow: Boolean = true,
     isDarkTheme: Boolean = false,
     onThemeToggle: () -> Unit = {},
-    onSortClick: () -> Unit
+    onSortClick: () -> Unit,
+    onRefreshClick: () -> Unit,
+    isRefreshing: Boolean
 ) {
     Column(
         modifier = modifier
@@ -55,6 +58,24 @@ fun SlimTopBar(
                     color = contentColor,
                     modifier = Modifier.weight(1f)
                 )
+
+                // Refresh button
+                IconButton(
+                    onClick = onRefreshClick,
+                    enabled = !isRefreshing, // Disabled when refreshing
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Refresh",
+                        tint = if (isRefreshing) {
+                            contentColor.copy(alpha = 0.38f) // Grayed out
+                        } else {
+                            contentColor
+                        },
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
 
                 // Theme toggle button
                 IconButton(

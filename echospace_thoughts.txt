@@ -1,4 +1,6 @@
 basic functionality:
+- database removed means no more files i think i need to fix this as well
+- fix the app storage permission (something is messedup)
 - colour of sort bottom sheet
 - sort button to function more like toggle
 - files with wordcount and last modified metadata
@@ -8,9 +10,10 @@ basic functionality:
 - Export/import features
 - Backup/sync capabilities
 - maybe change the formatstyle for the file hashtag in view mode
+- possibly show the app folder path in settings page
 
 
--sorting should work for virtual folders as well
+- sorting should work for virtual folders as well
 - wordcount to ignore the markdown formating symbols
 - hilt making the changes not being saved to the file
 - fix rotation causing the create new file dialog close, exising out of editing mode and removing the files from the homescreen

@@ -112,7 +112,12 @@ fun HomeScreen(
                 title = "EchoSpace",
                 isDarkTheme = isDarkTheme,
                 onThemeToggle = themeViewModel::toggleTheme,
-                onSortClick = { showSortBottomSheet = true }
+                onSortClick = { showSortBottomSheet = true },
+                onRefreshClick = {
+                    // This calls the same refresh function as pull-to-refresh
+                    viewModel.refreshFiles()
+                },
+                isRefreshing = isRefreshing
             )
         },
         snackbarHost = {
@@ -186,34 +191,54 @@ fun HomeScreen(
             }
         ) {
             LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize(),  // This ensures full screen coverage for pull to refresh
                 contentPadding = PaddingValues(horizontal = 4.dp)
             ) {
-                items(entries, key = { it.file.uri }) { entry ->
-                    val isRevealed = revealedEntryId == entry.file.uri.toString()
-
-                    SwipeableDiaryListItem(
-                        entry = entry,
-                        onItemClick = {
-                            revealedEntryId = null
-                            val intent = Intent(context, EditorActivity::class.java).apply {
-                                putExtra("file_uri", entry.file.uri.toString())
-                            }
-                            editorLauncher.launch(intent)
-                        },
-                        onRename = {
-                            entryToRename = entry
-                            revealedEntryId = null
-                        },
-                        onDelete = {
-                            entryToDelete = entry
-                            revealedEntryId = null
-                        },
-                        isRevealed = isRevealed,
-                        onRevealChange = { shouldReveal ->
-                            revealedEntryId = if (shouldReveal) entry.file.uri.toString() else null
+                if (entries.isEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillParentMaxSize()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "Welcome to EchoSpace!",
+                                style = MaterialTheme.typography.headlineMedium
+                            )
                         }
-                    )
-                    //HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                    }
+                } else {
+                    items(entries, key = { it.file.uri }) { entry ->
+                        val isRevealed = revealedEntryId == entry.file.uri.toString()
+
+                        SwipeableDiaryListItem(
+                            entry = entry,
+                            onItemClick = {
+                                revealedEntryId = null
+                                val intent = Intent(context, EditorActivity::class.java).apply {
+                                    putExtra("file_uri", entry.file.uri.toString())
+                                }
+                                editorLauncher.launch(intent)
+                            },
+                            onRename = {
+                                entryToRename = entry
+                                revealedEntryId = null
+                            },
+                            onDelete = {
+                                entryToDelete = entry
+                                revealedEntryId = null
+                            },
+                            isRevealed = isRevealed,
+                            onRevealChange = { shouldReveal ->
+                                revealedEntryId =
+                                    if (shouldReveal) entry.file.uri.toString() else null
+                            }
+                        )
+                        //HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                    }
                 }
             }
         }

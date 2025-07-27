@@ -24,12 +24,40 @@ object MetadataUtils {
             lines
         }
 
-        // Join all content lines and split by whitespace
-        return contentLines
+        // Join all content lines and clean markdown
+        val cleanedContent = contentLines
             .joinToString(" ") // Combine all lines into one string
+            .let { removeMarkdownFormatting(it) } // Remove markdown symbols
+
+        // Join all content lines and split by whitespace
+        return cleanedContent
             .split(Regex("\\s+")) // Split by any whitespace (spaces, tabs, newlines)
             .filter { it.isNotBlank() } // Remove empty strings
             .size // Count the remaining words
+    }
+
+    /**
+     * Removes markdown formatting symbols while preserving content
+     */
+    private fun removeMarkdownFormatting(text: String): String {
+        var cleaned = text
+
+        // Remove headers: # ## ### text → text
+        cleaned = cleaned.replace(Regex("^#{1,6}\\s+"), "")
+
+        // Remove list markers: - * + text → text
+        cleaned = cleaned.replace(Regex("^[\\-\\*\\+]\\s+"), "")
+
+        // Remove blockquote markers: > text → text
+        cleaned = cleaned.replace(Regex("^>\\s+"), "")
+
+        // Remove remaining markdown characters that might be standalone
+        cleaned = cleaned.replace(Regex("[\\*_`~\\[\\]\\(\\)#>\\-\\+]"), " ")
+
+        // Clean up multiple spaces
+        cleaned = cleaned.replace(Regex("\\s+"), " ").trim()
+
+        return cleaned
     }
 
     /**

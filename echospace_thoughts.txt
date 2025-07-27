@@ -1,9 +1,7 @@
 basic functionality:
 - database removed means no more files i think i need to fix this as well
 - fix the app storage permission (something is messedup)
-- colour of sort bottom sheet
 - sort button to function more like toggle
-- files with wordcount and last modified metadata
 - Search functionality including content
 - virtual File organization/folders using hashtags
 - auto add hashtags in file content
@@ -23,7 +21,6 @@ basic functionality:
 - double and single quote support
 - change the font typeface
 - better search result maybe with the virtual folder path
-- last modified should change if file edited outside the app
 - search can be non sequential just looking for keywords / better content search algorithm 
 - content or title hashmaps for better search optimisation
 - option for private folder (using the #enc folder tag maybe)
@@ -50,7 +47,6 @@ future features:
 - save version for files basically saving the changes history
 - recyle bin
 - archive notes
-- accordian like animation for swipe to reveal
 - Are error messages localized or do you plan to add internationalization?
 
 

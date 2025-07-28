@@ -7,12 +7,12 @@ plugins {
 }
 
 android {
-    namespace = "com.example.echospace"
+    namespace = "com.chani.echospace"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.echospace"
-        minSdk = 24
+        applicationId = "com.chani.echospace"
+        minSdk = 30
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -27,20 +27,15 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Enable baseline profiles
-            isProfileable = true
         }
     }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-
     kotlinOptions {
         jvmTarget = "11"
     }
-
     buildFeatures {
         compose = true
     }

@@ -1,4 +1,4 @@
-
+// app/src/main/java/com/chani/echospace/data/local/DiaryMetadata.kt
 
 package com.chani.echospace.data.local
 

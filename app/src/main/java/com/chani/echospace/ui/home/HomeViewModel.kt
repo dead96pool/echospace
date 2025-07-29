@@ -1,4 +1,4 @@
-// /app/src/main/java/com/example/echospace/ui/home/HomeViewModel.kt
+// /app/src/main/java/com/chani/echospace/ui/home/HomeViewModel.kt
 
 package com.chani.echospace.ui.home
 

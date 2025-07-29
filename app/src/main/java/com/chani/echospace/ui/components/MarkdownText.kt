@@ -21,7 +21,7 @@ fun MarkdownText(
     val elements = remember(text) { MarkdownParser.parseMarkdown(text) }
 
     // Define theme-aware quote color once in the composable
-    val quoteColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+    val quoteColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
 
     SelectionContainer {
         Column(

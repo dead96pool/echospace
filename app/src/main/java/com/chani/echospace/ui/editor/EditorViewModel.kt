@@ -2,6 +2,8 @@
 
 package com.chani.echospace.ui.editor
 
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import com.chani.echospace.data.local.FileOperationResult
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
@@ -10,6 +12,7 @@ import com.chani.echospace.domain.repository.DiaryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -29,19 +32,57 @@ class EditorViewModel @Inject constructor(
     private val _content = MutableStateFlow("")
     val content = _content.asStateFlow()
 
-    private val _saveStatus = MutableStateFlow<SaveStatus>(SaveStatus.Idle)
+    // Text content state for surviving configuration changes
+    private val _textFieldValue = MutableStateFlow(TextFieldValue(""))
+    val textFieldValue: StateFlow<TextFieldValue> = _textFieldValue.asStateFlow()
 
+    // EXISTING: Your SaveStatus system (kept as-is)
+    private val _saveStatus = MutableStateFlow<SaveStatus>(SaveStatus.Idle)
+    val saveStatus = _saveStatus.asStateFlow()
+
+    // EXISTING: Current file tracking
     private var currentFile: DocumentFile? = null
 
-    // This function will save the initial content to the file
+    // NEW: Edit mode state management
+    private val _isEditMode = MutableStateFlow(false)
+    val isEditMode: StateFlow<Boolean> = _isEditMode.asStateFlow()
+
+    // Track initialization and content loading
+    private var isEditModeInitialized = false
+    private var isContentLoaded = false
+
+    // Loading state for content
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    // NEW: Initialize edit mode (with guard)
+    fun initializeEditMode(startInEditMode: Boolean) {
+        if (!isEditModeInitialized) {
+            _isEditMode.value = startInEditMode
+            isEditModeInitialized = true
+        }
+    }
+
+    // NEW: Set edit mode
+    fun setEditMode(editMode: Boolean) {
+        _isEditMode.value = editMode
+    }
+
+    // EXISTING: Your setInitialContentAndSave function - modified to use ViewModel text state
     suspend fun setInitialContentAndSave(file: DocumentFile, initialText: String) {
         currentFile = file
         _saveStatus.value = SaveStatus.Saving
 
         when (val result = diaryRepository.saveEntry(file, initialText)) {
             is FileOperationResult.Success -> {
+                // Update both the old content state and new textFieldValue state
                 _content.value = initialText
+                _textFieldValue.value = TextFieldValue(
+                    text = initialText,
+                    selection = TextRange(initialText.length)
+                )
                 _saveStatus.value = SaveStatus.Success
+                isContentLoaded = true
                 // Brief delay then reset
                 delay(1000)
                 _saveStatus.value = SaveStatus.Idle
@@ -54,19 +95,32 @@ class EditorViewModel @Inject constructor(
         }
     }
 
+    // EXISTING: Your loadContent function - MODIFIED to update both states + prevent reloading
     fun loadContent(file: DocumentFile) {
+        if (isContentLoaded) return // NEW: Prevent reloading on configuration changes
+
         viewModelScope.launch {
             // Set the current file when loading
             currentFile = file
-            _content.value = diaryRepository.readContent(file)
+            val fileContent = diaryRepository.readContent(file) // Your existing direct call
+
+            // Update both states
+            _content.value = fileContent
+            _textFieldValue.value = TextFieldValue(
+                text = fileContent,
+                selection = TextRange(fileContent.length)
+            )
+            isContentLoaded = true
         }
     }
 
+    // EXISTING: Your saveContent function - MODIFIED to use textFieldValue but keep all parameters
     fun saveContent(
         file: DocumentFile? = currentFile,
-        text: String? = _content.value,
-        onSaveComplete: (() -> Unit)? = null
+        text: String? = _textFieldValue.value.text, // NEW: Use textFieldValue text by default
+        onSaveComplete: (() -> Unit)? = null // PRESERVED: Your callback parameter
     ) {
+
         viewModelScope.launch {
             _saveStatus.value = SaveStatus.Saving
 
@@ -79,10 +133,14 @@ class EditorViewModel @Inject constructor(
 
             when (val result = diaryRepository.saveEntry(file, text)) {
                 is FileOperationResult.Success -> {
-                    // Update the UI state with the new content (your existing functionality)
+                    // Update both UI states with the new content
                     _content.value = text
+                    _textFieldValue.value = TextFieldValue(
+                        text = text,
+                        selection = TextRange(text.length)
+                    )
                     _saveStatus.value = SaveStatus.Success
-                    // Call the completion callback (your existing functionality)
+                    // PRESERVED: Call the completion callback
                     onSaveComplete?.invoke()
                     delay(2000)
                     _saveStatus.value = SaveStatus.Idle
@@ -96,7 +154,19 @@ class EditorViewModel @Inject constructor(
         }
     }
 
+    // NEW: Update text content (for TextField onValueChange)
+    fun updateTextContent(newTextFieldValue: TextFieldValue) {
+        _textFieldValue.value = newTextFieldValue
+        // Also update the legacy content state for compatibility
+        _content.value = newTextFieldValue.text
+    }
+
+//    // EXISTING: Your commented updateContent function - can be restored if needed
 //    fun updateContent(newContent: String) {
 //        _content.value = newContent
+//        _textFieldValue.value = TextFieldValue(
+//            text = newContent,
+//            selection = TextRange(newContent.length)
+//        )
 //    }
 }

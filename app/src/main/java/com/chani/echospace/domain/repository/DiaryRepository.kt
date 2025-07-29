@@ -2,6 +2,7 @@
 
 package com.chani.echospace.domain.repository
 
+import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import com.chani.echospace.data.local.FileOperationResult
 import com.chani.echospace.domain.model.DiaryEntry
@@ -15,4 +16,5 @@ interface DiaryRepository {
     suspend fun renameEntry(entry: DiaryEntry, newName: String): DiaryEntry?
     suspend fun saveEntry(file: DocumentFile, content: String): FileOperationResult
     suspend fun refreshAllMetadata()
+    suspend fun saveFolderUri(uri: Uri)
 }

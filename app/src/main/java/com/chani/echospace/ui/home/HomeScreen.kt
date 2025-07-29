@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.chani.echospace.domain.model.DiaryEntry
 import com.chani.echospace.ui.components.*
 import com.chani.echospace.ui.components.CreateEntryDialog
+import com.chani.echospace.ui.components.FolderAccessLostCard
 import com.chani.echospace.ui.components.RenameEntryDialog
 import com.chani.echospace.ui.components.SlimTopBar
 import com.chani.echospace.ui.components.SwipeableDiaryListItem
@@ -45,6 +46,9 @@ fun HomeScreen(
     val entries by viewModel.entries.collectAsState()
     val sortOption by viewModel.sortOption.collectAsState()
     val isDarkTheme by themeViewModel.isDarkTheme.collectAsState()
+
+    // NEW: Collect UI state for folder access management
+    val uiState by viewModel.uiState.collectAsState()
 
     // refresh state
     val isRefreshing by viewModel.isRefreshing.collectAsState()
@@ -70,6 +74,15 @@ fun HomeScreen(
         contract = ActivityResultContracts.StartActivityForResult()
     ) {
         viewModel.loadEntries() // Refresh the list when returning from editor
+    }
+
+    // NEW: Add folder picker launcher for reselection
+    val folderPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.onFolderSelected(uri)
+        }
     }
 
     // Handle refresh result with snackbar
@@ -152,96 +165,120 @@ fun HomeScreen(
             }
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    revealedEntryId = null
-                    showCreateDialog = true
-                },
-                // Add colors parameter for complete control
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.background
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.NoteAdd,
-                    contentDescription = "New File"
-                )
-            }
-        }
-    ) { padding ->
-        // Wrap LazyColumn with PullToRefreshBox
-        PullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = {
-                // Dismiss any revealed swipe actions
-                revealedEntryId = null
-                viewModel.refreshFiles()
-            },
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            state = pullToRefreshState,
-            indicator = {
-                PullToRefreshDefaults.Indicator(
-                    modifier = Modifier.align(Alignment.TopCenter),
-                    isRefreshing = isRefreshing,
-                    state = pullToRefreshState,
+            // Only show FAB when in normal state
+            if (uiState is HomeUiState.Normal) {
+                FloatingActionButton(
+                    onClick = {
+                        revealedEntryId = null
+                        showCreateDialog = true
+                    },
+                    // Add colors parameter for complete control
                     containerColor = MaterialTheme.colorScheme.primary,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-            }
-        ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize(),  // This ensures full screen coverage for pull to refresh
-                contentPadding = PaddingValues(horizontal = 4.dp)
-            ) {
-                if (entries.isEmpty()) {
-                    item {
-                        Column(
-                            modifier = Modifier
-                                .fillParentMaxSize()
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = "Welcome to EchoSpace!",
-                                style = MaterialTheme.typography.headlineMedium
-                            )
-                        }
-                    }
-                } else {
-                    items(entries, key = { it.file.uri }) { entry ->
-                        val isRevealed = revealedEntryId == entry.file.uri.toString()
-
-                        SwipeableDiaryListItem(
-                            entry = entry,
-                            onItemClick = {
-                                revealedEntryId = null
-                                val intent = Intent(context, EditorActivity::class.java).apply {
-                                    putExtra("file_uri", entry.file.uri.toString())
-                                }
-                                editorLauncher.launch(intent)
-                            },
-                            onRename = {
-                                entryToRename = entry
-                                revealedEntryId = null
-                            },
-                            onDelete = {
-                                entryToDelete = entry
-                                revealedEntryId = null
-                            },
-                            isRevealed = isRevealed,
-                            onRevealChange = { shouldReveal ->
-                                revealedEntryId =
-                                    if (shouldReveal) entry.file.uri.toString() else null
-                            }
-                        )
-                        //HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                    }
+                    contentColor = MaterialTheme.colorScheme.background
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.NoteAdd,
+                        contentDescription = "New File"
+                    )
                 }
             }
         }
+    ) { padding ->
+        // NEW: Check UI state and show appropriate content
+        when (uiState) {
+            is HomeUiState.FolderAccessLost -> {
+                // Show folder access lost UI
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    FolderAccessLostCard(
+                        onReselectFolder = {
+                            folderPickerLauncher.launch(null)
+                        }
+                    )
+                }
+            }
+            is HomeUiState.Normal -> {
+                // Wrap LazyColumn with PullToRefreshBox
+                PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = {
+                        // Dismiss any revealed swipe actions
+                        revealedEntryId = null
+                        viewModel.refreshFiles()
+                    },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    state = pullToRefreshState,
+                    indicator = {
+                        PullToRefreshDefaults.Indicator(
+                            modifier = Modifier.align(Alignment.TopCenter),
+                            isRefreshing = isRefreshing,
+                            state = pullToRefreshState,
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                ) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize(),  // This ensures full screen coverage for pull to refresh
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        if (entries.isEmpty()) {
+                            item {
+                                Column(
+                                    modifier = Modifier
+                                        .fillParentMaxSize()
+                                        .padding(16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = "Welcome to EchoSpace!",
+                                        style = MaterialTheme.typography.headlineMedium
+                                    )
+                                }
+                            }
+                        } else {
+                            items(entries, key = { it.file.uri }) { entry ->
+                                val isRevealed = revealedEntryId == entry.file.uri.toString()
+
+                                SwipeableDiaryListItem(
+                                    entry = entry,
+                                    onItemClick = {
+                                        revealedEntryId = null
+                                        val intent =
+                                            Intent(context, EditorActivity::class.java).apply {
+                                                putExtra("file_uri", entry.file.uri.toString())
+                                            }
+                                        editorLauncher.launch(intent)
+                                    },
+                                    onRename = {
+                                        entryToRename = entry
+                                        revealedEntryId = null
+                                    },
+                                    onDelete = {
+                                        entryToDelete = entry
+                                        revealedEntryId = null
+                                    },
+                                    isRevealed = isRevealed,
+                                    onRevealChange = { shouldReveal ->
+                                        revealedEntryId =
+                                            if (shouldReveal) entry.file.uri.toString() else null
+                                    }
+                                )
+                                //HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                            }
+                        }
+                    } // lazy column ending
+                } // pull refresh ending
+            } // ui state ending
+        } // when ending
     }
 
     // --- Dialog Implementations ---

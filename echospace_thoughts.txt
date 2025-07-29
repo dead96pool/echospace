@@ -1,4 +1,5 @@
 basic functionality:
+- Database Recovery -- Consider adding database recreation logic if corruption is detected.
 - database removed means no more files i think i need to fix this as well
 - fix the app storage permission (something is messedup)
 - sort button to function more like toggle

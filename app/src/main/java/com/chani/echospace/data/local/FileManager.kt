@@ -14,6 +14,7 @@ import android.util.Log
 import javax.inject.Inject
 
 class FileAlreadyExistsException(message: String) : Exception(message)
+class FolderAccessLostException(message: String) : Exception(message)
 
 class FileManager @Inject constructor(
     private val context: Context
@@ -36,10 +37,34 @@ class FileManager @Inject constructor(
 
     fun isFolderSelected(): Boolean = getFolderUri() != null
 
-    suspend fun getFiles(): List<DocumentFile> = withContext(Dispatchers.IO) {
-        val folderUri = getFolderUri() ?: return@withContext emptyList()
-        val folder = DocumentFile.fromTreeUri(context, folderUri) ?: return@withContext emptyList()
-        folder.listFiles().filter { it.isFile && it.name?.endsWith(".txt") == true }
+    // to detect folder access loss
+    private fun validateFolderAccess(): Boolean {
+        val folderUri = getFolderUri() ?: return false
+        return try {
+            val folder = DocumentFile.fromTreeUri(context, folderUri)
+            folder?.exists() == true && folder.canRead()
+        } catch (e: SecurityException) {
+            Log.w("FileManager", "Folder access revoked", e)
+            false
+        } catch (e: Exception) {
+            Log.w("FileManager", "Folder validation failed", e)
+            false
+        }
+    }
+
+    // updated function to handle folder access loss
+    suspend fun getFiles(): List<DocumentFile> {
+        return withContext(Dispatchers.IO) {
+            // First validate folder access
+            if (!validateFolderAccess()) {
+                throw FolderAccessLostException("Folder access has been revoked or lost")
+            }
+
+            val folderUri = getFolderUri() ?: return@withContext emptyList()
+            val folder = DocumentFile.fromTreeUri(context, folderUri) ?: return@withContext emptyList()
+
+            folder.listFiles().filter { it.isFile && it.name?.endsWith(".txt") == true }
+        }
     }
 
     suspend fun createFile(fileName: String): DocumentFile? {

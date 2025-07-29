@@ -2,6 +2,7 @@
 
 package com.chani.echospace.data.repository
 
+import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import com.chani.echospace.data.local.DiaryMetadata
 import com.chani.echospace.data.local.DiaryMetadataDao
@@ -14,6 +15,7 @@ import com.chani.echospace.domain.repository.DiaryRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import android.util.Log
+import com.chani.echospace.data.local.FolderAccessLostException
 import javax.inject.Inject
 
 
@@ -21,6 +23,10 @@ class DiaryRepositoryImpl @Inject constructor(
     private val fileManager: FileManager,
     private val metadataDao: DiaryMetadataDao
 ) : DiaryRepository {
+
+    override suspend fun saveFolderUri(uri: Uri) {
+        fileManager.saveFolderUri(uri)
+    }
 
     override suspend fun getEntries(sortOption: SortOption): List<DiaryEntry> {
         return withContext(Dispatchers.IO) {
@@ -34,7 +40,7 @@ class DiaryRepositoryImpl @Inject constructor(
                     DiaryEntry(
                         file = file,
                         name = file.name?.removeSuffix(".txt") ?: "Untitled",
-                        // NEW: Include metadata if available
+                        // include metadata if available
                         wordCount = metadata?.wordCount,
                         lastModifiedDisplay = metadata?.let {
                             MetadataUtils.formatLastModified(it.lastModified)
@@ -48,6 +54,9 @@ class DiaryRepositoryImpl @Inject constructor(
                     SortOption.DATE_NEWEST -> entries.sortedByDescending { it.file.lastModified() }
                     SortOption.DATE_OLDEST -> entries.sortedBy { it.file.lastModified() }
                 }
+            } catch (e: FolderAccessLostException) {
+                // Re-throw this specific exception to be handled by the ViewModel
+                throw e
             } catch (e: Exception) {
                 Log.e("DiaryRepository", "Error getting entries", e)
                 emptyList()
@@ -96,7 +105,7 @@ class DiaryRepositoryImpl @Inject constructor(
     /**
      * File validation (enhanced with better error handling)
      */
-    private suspend fun isFileValid(file: DocumentFile): Boolean {
+    private fun isFileValid(file: DocumentFile): Boolean {
         return try {
             file.exists() && file.canRead() && file.length() >= 0
         } catch (e: Exception) {

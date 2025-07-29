@@ -317,7 +317,7 @@ fun EditorScreen(
 
                                 // Main empty message
                                 Text(
-                                    text = "Empty File",
+                                    text = "No Content in File",
                                     style = MaterialTheme.typography.headlineSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.alpha(0.6f), // Reduced alpha

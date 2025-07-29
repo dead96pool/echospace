@@ -1,11 +1,14 @@
 package com.chani.echospace.ui.editor
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -20,6 +23,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.InsertDriveFile
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -40,6 +45,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -51,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.chani.echospace.ui.components.MarkdownText
+import com.chani.echospace.ui.icons.CustomIcons
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -290,12 +297,46 @@ fun EditorScreen(
                         // Read-only mode with markdown parsing
                         // UPDATED: Show empty state if no content
                         if (textFieldValue.text.isBlank()) {
-                            Text(
-                                text = "This file is empty. Tap the edit button to add content.",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.align(Alignment.Center),
-                                style = MaterialTheme.typography.headlineMedium
-                            )
+                            // ✅ Enhanced empty state with better visual design
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(32.dp), // Extra padding for breathing room
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                // Empty file icon
+                                Icon(
+                                    imageVector = CustomIcons.UnknownDocument, // Document icon
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(64.dp)
+                                        .alpha(0.3f), // Reduced alpha for subtle look
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Main empty message
+                                Text(
+                                    text = "Empty File",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.alpha(0.6f), // Reduced alpha
+                                    textAlign = TextAlign.Center
+                                )
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                // Instruction text
+                                Text(
+                                    text = "Tap the edit button to start writing",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.alpha(0.5f), // Even more subtle
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         } else {
                             MarkdownText(
                                 text = textFieldValue.text,

@@ -54,6 +54,10 @@ class HomeViewModel @Inject constructor(
     private val _refreshResult = MutableStateFlow<RefreshResult?>(null)
     val refreshResult: StateFlow<RefreshResult?> = _refreshResult.asStateFlow()
 
+    // NEW: Add loading state for data fetching
+    private val _isLoadingEntries = MutableStateFlow(false)
+    val isLoadingEntries: StateFlow<Boolean> = _isLoadingEntries.asStateFlow()
+
     val sortOption: StateFlow<SortOption> = themePreferences.sortOption
         .stateIn(
             scope = viewModelScope,
@@ -78,6 +82,7 @@ class HomeViewModel @Inject constructor(
     fun loadEntries(sortOption: SortOption? = null) {
         viewModelScope.launch {
             try {
+                _isLoadingEntries.value = true // Start loading
                 _uiState.value = HomeUiState.Normal // Reset to normal state
                 val currentSort = sortOption ?: this@HomeViewModel.sortOption.value
                 _entries.value = diaryRepository.getEntries(currentSort)
@@ -88,6 +93,8 @@ class HomeViewModel @Inject constructor(
             } catch (e: Exception) {
                 // Handle any other errors (preserves existing behavior)
                 _entries.value = emptyList()
+            } finally {
+                _isLoadingEntries.value = false // Stop loading
             }
         }
     }
@@ -190,6 +197,7 @@ class HomeViewModel @Inject constructor(
     // NEW: Function to handle folder reselection
     private fun onFolderReselected() {
         _uiState.value = HomeUiState.Normal
+        _isLoadingEntries.value = true // Show loading during folder recovery
         loadEntries()
     }
 

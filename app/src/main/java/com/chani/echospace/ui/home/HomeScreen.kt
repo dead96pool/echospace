@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.chani.echospace.domain.model.DiaryEntry
 import com.chani.echospace.ui.components.*
 import com.chani.echospace.ui.components.CreateEntryDialog
@@ -47,13 +48,16 @@ fun HomeScreen(
     val sortOption by viewModel.sortOption.collectAsState()
     val isDarkTheme by themeViewModel.isDarkTheme.collectAsState()
 
-    // NEW: Collect UI state for folder access management
+    // Collect UI state for folder access management
     val uiState by viewModel.uiState.collectAsState()
 
     // refresh state
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val refreshResult by viewModel.refreshResult.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
+
+    val isLoadingEntries by viewModel.isLoadingEntries.collectAsState()
+
     // Snackbar state
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -76,7 +80,7 @@ fun HomeScreen(
         viewModel.loadEntries() // Refresh the list when returning from editor
     }
 
-    // NEW: Add folder picker launcher for reselection
+    // Add folder picker launcher for reselection
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
@@ -184,7 +188,7 @@ fun HomeScreen(
             }
         }
     ) { padding ->
-        // NEW: Check UI state and show appropriate content
+        // Check UI state and show appropriate content
         when (uiState) {
             is HomeUiState.FolderAccessLost -> {
                 // Show folder access lost UI
@@ -202,82 +206,108 @@ fun HomeScreen(
                 }
             }
             is HomeUiState.Normal -> {
-                // Wrap LazyColumn with PullToRefreshBox
-                PullToRefreshBox(
-                    isRefreshing = isRefreshing,
-                    onRefresh = {
-                        // Dismiss any revealed swipe actions
-                        revealedEntryId = null
-                        viewModel.refreshFiles()
-                    },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    state = pullToRefreshState,
-                    indicator = {
-                        PullToRefreshDefaults.Indicator(
-                            modifier = Modifier.align(Alignment.TopCenter),
-                            isRefreshing = isRefreshing,
-                            state = pullToRefreshState,
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            color = MaterialTheme.colorScheme.onPrimary
+                if (isLoadingEntries) {
+                    // Show loading indicator while files are being loaded
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                            strokeWidth = 3.5.dp
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = "Loading Your Files",
+                            //style = MaterialTheme.typography.headlineMedium,
+                            fontSize = 18.sp,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f)
                         )
                     }
-                ) {
-                    LazyColumn(
+                } else {
+                    // Wrap LazyColumn with PullToRefreshBox
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = {
+                            // Dismiss any revealed swipe actions
+                            revealedEntryId = null
+                            viewModel.refreshFiles()
+                        },
                         modifier = Modifier
-                            .fillMaxSize(),  // This ensures full screen coverage for pull to refresh
-                        contentPadding = PaddingValues(horizontal = 4.dp)
+                            .fillMaxSize()
+                            .padding(padding),
+                        state = pullToRefreshState,
+                        indicator = {
+                            PullToRefreshDefaults.Indicator(
+                                modifier = Modifier.align(Alignment.TopCenter),
+                                isRefreshing = isRefreshing,
+                                state = pullToRefreshState,
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
                     ) {
-                        if (entries.isEmpty()) {
-                            item {
-                                Column(
-                                    modifier = Modifier
-                                        .fillParentMaxSize()
-                                        .padding(16.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Text(
-                                        text = "Welcome to EchoSpace!",
-                                        style = MaterialTheme.typography.headlineMedium
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize(),  // This ensures full screen coverage for pull to refresh
+                            contentPadding = PaddingValues(horizontal = 4.dp)
+                        ) {
+                            if (entries.isEmpty()) {
+                                item {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillParentMaxSize()
+                                            .padding(16.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            text = "Welcome to EchoSpace!",
+                                            style = MaterialTheme.typography.headlineMedium
+                                        )
+                                    }
+                                }
+                            } else {
+                                items(entries, key = { it.file.uri }) { entry ->
+                                    val isRevealed = revealedEntryId == entry.file.uri.toString()
+
+                                    SwipeableDiaryListItem(
+                                        entry = entry,
+                                        onItemClick = {
+                                            revealedEntryId = null
+                                            val intent =
+                                                Intent(context, EditorActivity::class.java).apply {
+                                                    putExtra("file_uri", entry.file.uri.toString())
+                                                }
+                                            editorLauncher.launch(intent)
+                                        },
+                                        onRename = {
+                                            entryToRename = entry
+                                            revealedEntryId = null
+                                        },
+                                        onDelete = {
+                                            entryToDelete = entry
+                                            revealedEntryId = null
+                                        },
+                                        isRevealed = isRevealed,
+                                        onRevealChange = { shouldReveal ->
+                                            revealedEntryId =
+                                                if (shouldReveal) entry.file.uri.toString() else null
+                                        }
                                     )
+                                    //HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                                 }
                             }
-                        } else {
-                            items(entries, key = { it.file.uri }) { entry ->
-                                val isRevealed = revealedEntryId == entry.file.uri.toString()
-
-                                SwipeableDiaryListItem(
-                                    entry = entry,
-                                    onItemClick = {
-                                        revealedEntryId = null
-                                        val intent =
-                                            Intent(context, EditorActivity::class.java).apply {
-                                                putExtra("file_uri", entry.file.uri.toString())
-                                            }
-                                        editorLauncher.launch(intent)
-                                    },
-                                    onRename = {
-                                        entryToRename = entry
-                                        revealedEntryId = null
-                                    },
-                                    onDelete = {
-                                        entryToDelete = entry
-                                        revealedEntryId = null
-                                    },
-                                    isRevealed = isRevealed,
-                                    onRevealChange = { shouldReveal ->
-                                        revealedEntryId =
-                                            if (shouldReveal) entry.file.uri.toString() else null
-                                    }
-                                )
-                                //HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                            }
-                        }
-                    } // lazy column ending
-                } // pull refresh ending
-            } // ui state ending
+                        } // lazy column ending
+                    } // pull refresh ending
+                }
+            } // ui home state normal ending
         } // when ending
     }
 

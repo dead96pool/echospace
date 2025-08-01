@@ -100,7 +100,7 @@ fun EditorScreen(
         }
     }
 
-    // UPDATED: Load content using ViewModel method instead of direct calls
+    // Load content using ViewModel method instead of direct calls
     LaunchedEffect(initialContent) {
         if (initialContent != null) {
             // Set the editor's text state, but DON'T save to file yet
@@ -110,7 +110,7 @@ fun EditorScreen(
                     selection = TextRange(initialContent.length)
                 )
             )
-            // If you have an `isContentLoaded` flag, set it true here to avoid loading file content
+            // set `isContentLoaded` flag true here to avoid loading file content
             viewModel.markContentLoaded()
         } else {
             viewModel.loadContent(file)
@@ -266,7 +266,7 @@ fun EditorScreen(
                         BasicTextField(
                             value = textFieldValue,
                             onValueChange = { newValue ->
-                                // UPDATED: Update ViewModel instead of local state
+                                // Update ViewModel instead of local state
                                 viewModel.updateTextContent(newValue)
                             },
                             onTextLayout = { layoutResult ->
@@ -301,7 +301,7 @@ fun EditorScreen(
                         )
                     } else {
                         // Read-only mode with markdown parsing
-                        // UPDATED: Show empty state if no content
+                        // Show empty state if no content
                         if (textFieldValue.text.isBlank()) {
                             // ✅ Enhanced empty state with better visual design
                             Column(

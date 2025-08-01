@@ -51,6 +51,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -101,10 +103,16 @@ fun EditorScreen(
     // UPDATED: Load content using ViewModel method instead of direct calls
     LaunchedEffect(initialContent) {
         if (initialContent != null) {
-            // This is a new file: set its content and save it immediately
-            viewModel.setInitialContentAndSave(file, initialContent)
+            // Set the editor's text state, but DON'T save to file yet
+            viewModel.updateTextContent(
+                TextFieldValue(
+                    text = initialContent,
+                    selection = TextRange(initialContent.length)
+                )
+            )
+            // If you have an `isContentLoaded` flag, set it true here to avoid loading file content
+            viewModel.markContentLoaded()
         } else {
-            // This is an existing file: load content from storage
             viewModel.loadContent(file)
         }
     }

@@ -36,14 +36,14 @@ class EditorViewModel @Inject constructor(
     private val _textFieldValue = MutableStateFlow(TextFieldValue(""))
     val textFieldValue: StateFlow<TextFieldValue> = _textFieldValue.asStateFlow()
 
-    // EXISTING: Your SaveStatus system (kept as-is)
+    // SaveStatus system (kept as-is)
     private val _saveStatus = MutableStateFlow<SaveStatus>(SaveStatus.Idle)
     val saveStatus = _saveStatus.asStateFlow()
 
-    // EXISTING: Current file tracking
+    // Current file tracking
     private var currentFile: DocumentFile? = null
 
-    // NEW: Edit mode state management
+    // Edit mode state management
     private val _isEditMode = MutableStateFlow(false)
     val isEditMode: StateFlow<Boolean> = _isEditMode.asStateFlow()
 
@@ -55,7 +55,7 @@ class EditorViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    // NEW: Initialize edit mode (with guard)
+    // Initialize edit mode (with guard)
     fun initializeEditMode(startInEditMode: Boolean) {
         if (!isEditModeInitialized) {
             _isEditMode.value = startInEditMode
@@ -63,39 +63,16 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    // NEW: Set edit mode
+    // Set edit mode
     fun setEditMode(editMode: Boolean) {
         _isEditMode.value = editMode
     }
 
-    // EXISTING: Your setInitialContentAndSave function - modified to use ViewModel text state
-    suspend fun setInitialContentAndSave(file: DocumentFile, initialText: String) {
-        currentFile = file
-        _saveStatus.value = SaveStatus.Saving
-
-        when (val result = diaryRepository.saveEntry(file, initialText)) {
-            is FileOperationResult.Success -> {
-                // Update both the old content state and new textFieldValue state
-                _content.value = initialText
-                _textFieldValue.value = TextFieldValue(
-                    text = initialText,
-                    selection = TextRange(initialText.length)
-                )
-                _saveStatus.value = SaveStatus.Success
-                isContentLoaded = true
-                // Brief delay then reset
-                delay(1000)
-                _saveStatus.value = SaveStatus.Idle
-            }
-            is FileOperationResult.Error -> {
-                _saveStatus.value = SaveStatus.Error(result.message)
-                delay(3000)
-                _saveStatus.value = SaveStatus.Idle
-            }
-        }
+    fun markContentLoaded() {
+        isContentLoaded = true
     }
 
-    // EXISTING: Your loadContent function - MODIFIED to update both states + prevent reloading
+    // loadContent function to update both states + prevent reloading
     fun loadContent(file: DocumentFile) {
         if (isContentLoaded) return // NEW: Prevent reloading on configuration changes
 
@@ -114,7 +91,7 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    // EXISTING: Your saveContent function - MODIFIED to use textFieldValue but keep all parameters
+    // saveContent function to use textFieldValue but keep all parameters
     fun saveContent(
         file: DocumentFile? = currentFile,
         text: String? = _textFieldValue.value.text, // NEW: Use textFieldValue text by default
@@ -154,19 +131,10 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    // NEW: Update text content (for TextField onValueChange)
+    // Update text content (for TextField onValueChange)
     fun updateTextContent(newTextFieldValue: TextFieldValue) {
         _textFieldValue.value = newTextFieldValue
         // Also update the legacy content state for compatibility
         _content.value = newTextFieldValue.text
     }
-
-//    // EXISTING: Your commented updateContent function - can be restored if needed
-//    fun updateContent(newContent: String) {
-//        _content.value = newContent
-//        _textFieldValue.value = TextFieldValue(
-//            text = newContent,
-//            selection = TextRange(newContent.length)
-//        )
-//    }
 }

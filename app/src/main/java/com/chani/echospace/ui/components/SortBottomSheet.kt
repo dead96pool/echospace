@@ -4,7 +4,6 @@ package com.chani.echospace.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -42,7 +41,7 @@ fun SortBottomSheet(
                     .width(32.dp)
                     .height(4.dp)
                     .background(
-                        color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.4f),
+                        color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.5f),
                         shape = RoundedCornerShape(2.dp)
                     )
             )
@@ -67,13 +66,51 @@ fun SortBottomSheet(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            Column(modifier = Modifier.selectableGroup()) {
-                SortOption.entries.forEach { sortOption ->
+            // --- NEW: Two Columns for Sort Options ---
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                // Name column
+                Column(
+                    Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                ) {
                     SortOptionItem(
-                        sortOption = sortOption,
-                        isSelected = currentSortOption == sortOption,
+                        sortOption = SortOption.NAME_ASC,
+                        isSelected = currentSortOption == SortOption.NAME_ASC,
                         onSelected = {
-                            onSortOptionSelected(sortOption)
+                            onSortOptionSelected(SortOption.NAME_ASC)
+                            onDismiss()
+                        }
+                    )
+                    SortOptionItem(
+                        sortOption = SortOption.NAME_DESC,
+                        isSelected = currentSortOption == SortOption.NAME_DESC,
+                        onSelected = {
+                            onSortOptionSelected(SortOption.NAME_DESC)
+                            onDismiss()
+                        }
+                    )
+                }
+                // Date column
+                Column(
+                    Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                ) {
+                    SortOptionItem(
+                        sortOption = SortOption.DATE_NEWEST,
+                        isSelected = currentSortOption == SortOption.DATE_NEWEST,
+                        onSelected = {
+                            onSortOptionSelected(SortOption.DATE_NEWEST)
+                            onDismiss()
+                        }
+                    )
+                    SortOptionItem(
+                        sortOption = SortOption.DATE_OLDEST,
+                        isSelected = currentSortOption == SortOption.DATE_OLDEST,
+                        onSelected = {
+                            onSortOptionSelected(SortOption.DATE_OLDEST)
                             onDismiss()
                         }
                     )

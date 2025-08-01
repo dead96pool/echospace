@@ -2,6 +2,7 @@ package com.chani.echospace.data.local
 
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 object MetadataUtils {
 
@@ -68,25 +69,39 @@ object MetadataUtils {
     fun formatLastModified(timestamp: Long): String {
         val date = Date(timestamp)
         val now = Date()
-        val calendar = Calendar.getInstance()
 
-        // Check if the file was modified today
-        calendar.time = now
-        val todayDay = calendar.get(Calendar.DAY_OF_YEAR)
-        val todayYear = calendar.get(Calendar.YEAR)
+        val calendarDate = Calendar.getInstance().apply { time = date }
+        val calendarNow = Calendar.getInstance().apply { time = now }
 
-        calendar.time = date
-        val dateDay = calendar.get(Calendar.DAY_OF_YEAR)
-        val dateYear = calendar.get(Calendar.YEAR)
+        val todayDay = calendarNow.get(Calendar.DAY_OF_YEAR)
+        val todayYear = calendarNow.get(Calendar.YEAR)
 
-        return if (todayDay == dateDay && todayYear == dateYear) {
-            // Today - show time in 12-hour format: "02.47pm"
-            SimpleDateFormat("hh.mma", Locale.getDefault())
-                .format(date)
-                .lowercase(Locale.getDefault()) // Convert AM/PM to lowercase
-        } else {
-            // Other days - show date in dd.mm.yyyy format: "24.01.2025"
-            SimpleDateFormat("yyyy.MM.dd", Locale.getDefault()).format(date)
+        val dateDay = calendarDate.get(Calendar.DAY_OF_YEAR)
+        val dateYear = calendarDate.get(Calendar.YEAR)
+
+        return when {
+            // Today
+            todayDay == dateDay && todayYear == dateYear -> {
+                SimpleDateFormat("hh.mma", Locale.getDefault())
+                    .format(date)
+                    .lowercase(Locale.getDefault())
+            }
+            // Yesterday
+            todayYear == dateYear && todayDay - dateDay == 1 -> {
+                "Yesterday"
+            }
+            // Handles Dec 31/Jan 1 across years
+            todayYear - dateYear == 1 &&
+                    todayDay == 1 &&
+                    calendarDate.getActualMaximum(Calendar.DAY_OF_YEAR) == dateDay -> {
+                "Yesterday"
+            }
+            // x days ago
+            else -> {
+                val millisDiff = now.time - date.time
+                val daysDiff = TimeUnit.MILLISECONDS.toDays(millisDiff).toInt()
+                "$daysDiff days ago"
+            }
         }
     }
 }

@@ -82,7 +82,7 @@ class HomeViewModel @Inject constructor(
     fun loadEntries(sortOption: SortOption? = null) {
         viewModelScope.launch {
             try {
-                _isLoadingEntries.value = true // Start loading
+                _isLoadingEntries.value = _entries.value.isEmpty() // Start loading only when _entries empty
                 _uiState.value = HomeUiState.Normal // Reset to normal state
                 val currentSort = sortOption ?: this@HomeViewModel.sortOption.value
                 _entries.value = diaryRepository.getEntries(currentSort)

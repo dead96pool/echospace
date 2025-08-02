@@ -33,7 +33,7 @@ fun SortBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         modifier = modifier,
-        containerColor = MaterialTheme.colorScheme.inverseSurface,
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
         dragHandle = {
             Box(
                 modifier = Modifier
@@ -41,7 +41,7 @@ fun SortBottomSheet(
                     .width(32.dp)
                     .height(4.dp)
                     .background(
-                        color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                         shape = RoundedCornerShape(2.dp)
                     )
             )
@@ -143,8 +143,8 @@ private fun SortOptionItem(
             selected = isSelected,
             onClick = null,
             colors = RadioButtonDefaults.colors(
-                selectedColor = MaterialTheme.colorScheme.inverseOnSurface,
-                unselectedColor = MaterialTheme.colorScheme.inverseOnSurface
+                selectedColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         )
 
@@ -154,7 +154,7 @@ private fun SortOptionItem(
             imageVector = getSortIcon(sortOption),
             contentDescription = null,
             modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.inverseOnSurface
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Spacer(modifier = Modifier.width(12.dp))

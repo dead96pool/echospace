@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
-//import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import javax.inject.Inject
@@ -54,7 +53,7 @@ class HomeViewModel @Inject constructor(
     private val _refreshResult = MutableStateFlow<RefreshResult?>(null)
     val refreshResult: StateFlow<RefreshResult?> = _refreshResult.asStateFlow()
 
-    // NEW: Add loading state for data fetching
+    // Add loading state for data fetching
     private val _isLoadingEntries = MutableStateFlow(false)
     val isLoadingEntries: StateFlow<Boolean> = _isLoadingEntries.asStateFlow()
 

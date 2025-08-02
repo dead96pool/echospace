@@ -29,7 +29,8 @@ fun SwipeableDiaryListItem(
     onRename: () -> Unit,
     onDelete: () -> Unit,
     isRevealed: Boolean = false,
-    onRevealChange: (Boolean) -> Unit = {}
+    onRevealChange: (Boolean) -> Unit = {},
+    isSwipeEnabled: Boolean = true
 ) {
     val density = LocalDensity.current
     val actionButtonWidth = with(density) { 59.5.dp.toPx() }
@@ -82,20 +83,26 @@ fun SwipeableDiaryListItem(
                 .fillMaxSize()
                 .offset { IntOffset(animatedOffsetX.roundToInt(), 0) }
                 .zIndex(1f)
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures(
-                        onDragStart = {
-                            isDragging = true
-                        },
-                        onDragEnd = {
-                            isDragging = false
-                            val shouldReveal = offsetX > totalWidth * 0.5f
-                            onRevealChange(shouldReveal)
+                .let { modifier ->
+                    if (isSwipeEnabled) {
+                        modifier.pointerInput(Unit) {
+                            detectHorizontalDragGestures(
+                                onDragStart = {
+                                    isDragging = true
+                                },
+                                onDragEnd = {
+                                    isDragging = false
+                                    val shouldReveal = offsetX > totalWidth * 0.5f
+                                    onRevealChange(shouldReveal)
+                                }
+                            ) { _, dragAmount ->
+                                if (dragAmount > 0 || offsetX > 0) {
+                                    offsetX = (offsetX + dragAmount).coerceIn(0f, totalWidth)
+                                }
+                            }
                         }
-                    ) { _, dragAmount ->
-                        if (dragAmount > 0 || offsetX > 0) {
-                            offsetX = (offsetX + dragAmount).coerceIn(0f, totalWidth)
-                        }
+                    } else {
+                        modifier
                     }
                 },
             color = MaterialTheme.colorScheme.background,

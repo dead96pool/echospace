@@ -15,6 +15,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,6 +29,11 @@ fun DiaryListItem(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null
 ) {
+    // Pre-calculate and cache metadata during composition
+    val metadataText = remember(entry.wordCount, entry.lastModifiedDisplay) {
+        buildMetadataText(entry)
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -63,7 +69,7 @@ fun DiaryListItem(
                 overflow = TextOverflow.Ellipsis // Handle long file names gracefully
             )
 
-            val metadataText = buildMetadataText(entry)
+            //val metadataText = buildMetadataText(entry)
             if (metadataText.isNotEmpty()) {
                 Text(
                     text = metadataText,
@@ -78,10 +84,7 @@ fun DiaryListItem(
     }
 }
 
-/**
- * NEW: Builds the metadata text string in format "150 words | 24.01.2025"
- * Only shows metadata if available, gracefully handles missing data
- */
+// ensure it's only called when cached
 private fun buildMetadataText(entry: DiaryEntry): String {
     val parts = mutableListOf<String>()
 
@@ -95,6 +98,5 @@ private fun buildMetadataText(entry: DiaryEntry): String {
         parts.add(lastModified)
     }
 
-    // Join with " | " separator as requested
-    return parts.joinToString(" | ")
+    return parts.joinToString("  |  ")
 }

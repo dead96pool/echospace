@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.NoteAdd
 import androidx.compose.material3.*
@@ -256,7 +257,9 @@ fun HomeScreen(
                         LazyColumn(
                             modifier = Modifier
                                 .fillMaxSize(),  // This ensures full screen coverage for pull to refresh
-                            contentPadding = PaddingValues(horizontal = 4.dp)
+                            contentPadding = PaddingValues(horizontal = 4.dp),
+                            userScrollEnabled = !isRefreshing,  // Disable user scrolling while refreshing
+                            overscrollEffect = null
                         ) {
                             if (entries.isEmpty()) {
                                 item {
@@ -274,7 +277,11 @@ fun HomeScreen(
                                     }
                                 }
                             } else {
-                                items(entries, key = { it.file.uri }) { entry ->
+                                items(
+                                    items = entries,
+                                    key = { it.file.uri },
+                                    contentType = { "diary_entry" } // for better recycling
+                                ) { entry ->
                                     val isRevealed = revealedEntryId == entry.file.uri.toString()
 
                                     SwipeableDiaryListItem(
@@ -282,8 +289,14 @@ fun HomeScreen(
                                         onItemClick = {
                                             revealedEntryId = null
                                             val intent =
-                                                Intent(context, EditorActivity::class.java).apply {
-                                                    putExtra("file_uri", entry.file.uri.toString())
+                                                Intent(
+                                                    context,
+                                                    EditorActivity::class.java
+                                                ).apply {
+                                                    putExtra(
+                                                        "file_uri",
+                                                        entry.file.uri.toString()
+                                                    )
                                                 }
                                             editorLauncher.launch(intent)
                                         },
@@ -299,7 +312,8 @@ fun HomeScreen(
                                         onRevealChange = { shouldReveal ->
                                             revealedEntryId =
                                                 if (shouldReveal) entry.file.uri.toString() else null
-                                        }
+                                        },
+                                        isSwipeEnabled = !isRefreshing  // Disable swipe when refreshing
                                     )
                                     //HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                                 }

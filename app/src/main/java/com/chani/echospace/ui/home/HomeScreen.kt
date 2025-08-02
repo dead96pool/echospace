@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import com.chani.echospace.domain.model.DiaryEntry
 import com.chani.echospace.ui.components.*
 import com.chani.echospace.ui.components.CreateEntryDialog
+import com.chani.echospace.ui.components.CustomScrollbar
 import com.chani.echospace.ui.components.FolderAccessLostCard
 import com.chani.echospace.ui.components.RenameEntryDialog
 import com.chani.echospace.ui.components.SlimTopBar
@@ -232,95 +234,114 @@ fun HomeScreen(
                         )
                     }
                 } else {
-                    // Wrap LazyColumn with PullToRefreshBox
-                    PullToRefreshBox(
-                        isRefreshing = isRefreshing,
-                        onRefresh = {
-                            // Dismiss any revealed swipe actions
-                            revealedEntryId = null
-                            viewModel.refreshFiles()
-                        },
+                    // ✅ NEW: Create Box to contain both PullToRefreshBox and CustomScrollbar
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(padding),
-                        state = pullToRefreshState,
-                        indicator = {
-                            PullToRefreshDefaults.Indicator(
-                                modifier = Modifier.align(Alignment.TopCenter),
-                                isRefreshing = isRefreshing,
-                                state = pullToRefreshState,
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
+                            .padding(padding)
                     ) {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize(),  // This ensures full screen coverage for pull to refresh
-                            contentPadding = PaddingValues(horizontal = 4.dp),
-                            userScrollEnabled = !isRefreshing,  // Disable user scrolling while refreshing
-                            overscrollEffect = null
+                        // ✅ NEW: Remember LazyListState for scrollbar tracking
+                        val lazyListState = rememberLazyListState()
+                        // Wrap LazyColumn with PullToRefreshBox
+                        PullToRefreshBox(
+                            isRefreshing = isRefreshing,
+                            onRefresh = {
+                                // Dismiss any revealed swipe actions
+                                revealedEntryId = null
+                                viewModel.refreshFiles()
+                            },
+                            modifier = Modifier.fillMaxSize(),
+                            state = pullToRefreshState,
+                            indicator = {
+                                PullToRefreshDefaults.Indicator(
+                                    modifier = Modifier.align(Alignment.TopCenter),
+                                    isRefreshing = isRefreshing,
+                                    state = pullToRefreshState,
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
                         ) {
-                            if (entries.isEmpty()) {
-                                item {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillParentMaxSize()
-                                            .padding(16.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        Text(
-                                            text = "Welcome to EchoSpace!",
-                                            style = MaterialTheme.typography.headlineMedium
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxSize(),  // This ensures full screen coverage for pull to refresh
+                                contentPadding = PaddingValues(horizontal = 4.dp),
+                                userScrollEnabled = !isRefreshing,  // Disable user scrolling while refreshing
+                                overscrollEffect = null,
+                                state = lazyListState, // ✅ NEW: Add state for scrollbar tracking
+                            ) {
+                                if (entries.isEmpty()) {
+                                    item {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillParentMaxSize()
+                                                .padding(16.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            Text(
+                                                text = "Welcome to EchoSpace!",
+                                                style = MaterialTheme.typography.headlineMedium
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    items(
+                                        items = entries,
+                                        key = { it.file.uri },
+                                        contentType = { "diary_entry" } // for better recycling
+                                    ) { entry ->
+                                        val isRevealed =
+                                            revealedEntryId == entry.file.uri.toString()
+
+                                        SwipeableDiaryListItem(
+                                            entry = entry,
+                                            onItemClick = {
+                                                revealedEntryId = null
+                                                val intent =
+                                                    Intent(
+                                                        context,
+                                                        EditorActivity::class.java
+                                                    ).apply {
+                                                        putExtra(
+                                                            "file_uri",
+                                                            entry.file.uri.toString()
+                                                        )
+                                                    }
+                                                editorLauncher.launch(intent)
+                                            },
+                                            onRename = {
+                                                entryToRename = entry
+                                                revealedEntryId = null
+                                            },
+                                            onDelete = {
+                                                entryToDelete = entry
+                                                revealedEntryId = null
+                                            },
+                                            isRevealed = isRevealed,
+                                            onRevealChange = { shouldReveal ->
+                                                revealedEntryId =
+                                                    if (shouldReveal) entry.file.uri.toString() else null
+                                            },
+                                            isSwipeEnabled = !isRefreshing  // Disable swipe when refreshing
                                         )
+                                        //HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                                     }
                                 }
-                            } else {
-                                items(
-                                    items = entries,
-                                    key = { it.file.uri },
-                                    contentType = { "diary_entry" } // for better recycling
-                                ) { entry ->
-                                    val isRevealed = revealedEntryId == entry.file.uri.toString()
-
-                                    SwipeableDiaryListItem(
-                                        entry = entry,
-                                        onItemClick = {
-                                            revealedEntryId = null
-                                            val intent =
-                                                Intent(
-                                                    context,
-                                                    EditorActivity::class.java
-                                                ).apply {
-                                                    putExtra(
-                                                        "file_uri",
-                                                        entry.file.uri.toString()
-                                                    )
-                                                }
-                                            editorLauncher.launch(intent)
-                                        },
-                                        onRename = {
-                                            entryToRename = entry
-                                            revealedEntryId = null
-                                        },
-                                        onDelete = {
-                                            entryToDelete = entry
-                                            revealedEntryId = null
-                                        },
-                                        isRevealed = isRevealed,
-                                        onRevealChange = { shouldReveal ->
-                                            revealedEntryId =
-                                                if (shouldReveal) entry.file.uri.toString() else null
-                                        },
-                                        isSwipeEnabled = !isRefreshing  // Disable swipe when refreshing
-                                    )
-                                    //HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                                }
-                            }
-                        } // lazy column ending
-                    } // pull refresh ending
-                }
+                            } // lazy column ending
+                        } // pull refresh ending
+                        // ✅ NEW: Add CustomScrollbar overlay
+                        CustomScrollbar(
+                            listState = lazyListState,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .fillMaxHeight()
+                                .padding(top = 0.dp,end = 2.dp,bottom = 0.dp), // Small padding from screen edge
+                            thickness = 4.dp, // Minimal thickness like Gmail
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+                } // else ending
             } // ui home state normal ending
         } // when ending
     }

@@ -146,43 +146,48 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    // Add timestamp tracking
+    private var lastRefreshTime = 0L
+    private val REFRESH_COOLDOWN = 5000L // 5 seconds
     /**
      * Enhanced refresh with metadata cache updates
      * Maintains all existing functionality while adding metadata refresh
      */
     fun refreshFiles() {
         viewModelScope.launch {
+            val currentTime = System.currentTimeMillis()
+
+            // Avoid excessive refreshes
+            if (currentTime - lastRefreshTime < REFRESH_COOLDOWN) {
+                return@launch
+            }
+
             _isRefreshing.value = true
             try {
-                _uiState.value = HomeUiState.Normal // Reset to normal state
+                _uiState.value = HomeUiState.Normal
                 val currentSort = sortOption.value
                 val previousEntries = _entries.value
 
-                // Refresh metadata cache first (your existing logic)
+                // Only refresh metadata of what changed
                 diaryRepository.refreshAllMetadata()
 
-                // Get refreshed entries with current sort order (your existing logic)
                 val refreshedEntries = diaryRepository.getEntries(currentSort)
                 _entries.value = refreshedEntries
 
-                // Calculate refresh statistics (your existing logic)
                 val refreshCount = refreshedEntries.size
                 val newFiles = refreshedEntries.size - previousEntries.size
                 _refreshResult.value = RefreshResult.Success(refreshCount, newFiles)
 
-                // Brief delay to show refresh indicator (your existing logic)
+                lastRefreshTime = currentTime
                 delay(500)
             } catch (e: FolderAccessLostException) {
-                // Handle folder access loss
                 _uiState.value = HomeUiState.FolderAccessLost
                 _entries.value = emptyList()
                 _refreshResult.value = RefreshResult.Error("Folder access lost. Please reselect your folder.")
             } catch (e: Exception) {
-                // Handle other errors (preserves existing behavior)
                 _refreshResult.value = RefreshResult.Error("Failed to refresh: ${e.message}")
             } finally {
                 _isRefreshing.value = false
-                // Clear result after showing (your existing logic)
                 delay(3000)
                 _refreshResult.value = null
             }

@@ -12,6 +12,7 @@ import com.chani.echospace.data.local.MetadataUtils
 import com.chani.echospace.domain.model.DiaryEntry
 import com.chani.echospace.domain.model.SortOption
 import com.chani.echospace.domain.repository.DiaryRepository
+import kotlinx.coroutines.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import android.util.Log
@@ -31,16 +32,18 @@ class DiaryRepositoryImpl @Inject constructor(
     override suspend fun getEntries(sortOption: SortOption): List<DiaryEntry> {
         return withContext(Dispatchers.IO) {
             try {
-                // Get valid files (same logic as before)
+                // Cache file list to avoid repeated enumeration
                 val files = fileManager.getFiles().filter { isFileValid(it) }
 
-                // Create enhanced entries with metadata
+                // Pre-load all metadata in a single batch query instead of individual queries
+                val allMetadata = metadataDao.getAllMetadata().associateBy { it.fileUri }
+
+                // Create entries with cached metadata
                 val entries = files.map { file ->
-                    val metadata = getOrCalculateMetadata(file)
+                    val metadata = allMetadata[file.uri.toString()]
                     DiaryEntry(
                         file = file,
                         name = file.name?.removeSuffix(".txt") ?: "Untitled",
-                        // include metadata if available
                         wordCount = metadata?.wordCount,
                         lastModifiedDisplay = metadata?.let {
                             MetadataUtils.formatLastModified(it.lastModified)
@@ -48,14 +51,14 @@ class DiaryRepositoryImpl @Inject constructor(
                     )
                 }
 
-                return@withContext when (sortOption) {
+                // Sort entries
+                when (sortOption) {
                     SortOption.NAME_ASC -> entries.sortedBy { it.name.lowercase() }
                     SortOption.NAME_DESC -> entries.sortedByDescending { it.name.lowercase() }
                     SortOption.DATE_NEWEST -> entries.sortedByDescending { it.file.lastModified() }
                     SortOption.DATE_OLDEST -> entries.sortedBy { it.file.lastModified() }
                 }
             } catch (e: FolderAccessLostException) {
-                // Re-throw this specific exception to be handled by the ViewModel
                 throw e
             } catch (e: Exception) {
                 Log.e("DiaryRepository", "Error getting entries", e)
@@ -209,20 +212,42 @@ class DiaryRepositoryImpl @Inject constructor(
     }
 
     /**
-     * NEW: Refresh all metadata (used by pull-to-refresh)
-     * Clears cache and recalculates everything
+     * Refresh changed files metadata (used by pull-to-refresh)
      */
     override suspend fun refreshAllMetadata() {
         withContext(Dispatchers.IO) {
             try {
-                // Clear existing cache
-                metadataDao.clearAllMetadata()
-
-                // Recalculate metadata for all valid files
+                // Get current files and existing metadata
                 val files = fileManager.getFiles().filter { isFileValid(it) }
-                files.forEach { file ->
-                    getOrCalculateMetadata(file) // This will cache the new metadata
+                val existingMetadata = metadataDao.getAllMetadata()
+                val existingUris = existingMetadata.associateBy { it.fileUri }
+
+                // Only process files that need updating
+                val filesToUpdate = files.filter { file ->
+                    val existing = existingUris[file.uri.toString()]
+                    existing == null || existing.lastModified != file.lastModified()
                 }
+
+                Log.d("DiaryRepository", "Refreshing ${filesToUpdate.size} of ${files.size} files")
+
+                // Process files in parallel (limit concurrency to avoid overwhelming storage)
+                filesToUpdate.chunked(5).forEach { chunk ->
+                    coroutineScope {
+                        chunk.map { file ->
+                            async {
+                                getOrCalculateMetadata(file)
+                            }
+                        }.awaitAll()
+                    }
+                }
+
+                // Clean up metadata for deleted files
+                val currentUris = files.map { it.uri.toString() }.toSet()
+                val orphanedMetadata = existingUris.keys - currentUris
+                orphanedMetadata.forEach { orphanedUri ->
+                    metadataDao.deleteMetadata(orphanedUri)
+                }
+
             } catch (e: Exception) {
                 Log.e("DiaryRepository", "Failed to refresh metadata", e)
             }

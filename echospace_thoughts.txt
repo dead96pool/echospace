@@ -1,5 +1,5 @@
 basic functionality:
-- sort button to function more like toggle
+- optimize the files listing loading taking time with more files
 - Search functionality including content
 - virtual File organization/folders using hashtags
 - auto add hashtags in file content
@@ -29,6 +29,7 @@ basic functionality:
 
 
 future features:
+- sort button to function more like toggle
 - app main icon something like a typewriter
 - undo and redo working
 - cloud sync

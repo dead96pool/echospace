@@ -1,5 +1,5 @@
 basic functionality:
-- optimize the files listing loading taking time with more files
+- add three dots and settings page
 - Search functionality including content
 - virtual File organization/folders using hashtags
 - auto add hashtags in file content

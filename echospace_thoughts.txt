@@ -1,5 +1,5 @@
 basic functionality:
-- add three dots and settings page
+- fix the 1 day ago and yesterday in metadata display
 - Search functionality including content
 - virtual File organization/folders using hashtags
 - auto add hashtags in file content

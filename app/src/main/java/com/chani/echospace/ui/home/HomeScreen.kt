@@ -61,6 +61,12 @@ fun HomeScreen(
 
     val isLoadingEntries by viewModel.isLoadingEntries.collectAsState()
 
+    // ✅ NEW: Search state
+    val isSearching by viewModel.isSearching.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val searchResults by viewModel.searchResults.collectAsState()
+    val isSearchLoading by viewModel.isSearchLoading.collectAsState()
+
     // Snackbar state
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -92,6 +98,7 @@ fun HomeScreen(
         }
     }
 
+
     // Handle refresh result with snackbar
     LaunchedEffect(refreshResult) {
         refreshResult?.let { result ->
@@ -117,6 +124,11 @@ fun HomeScreen(
         }
     }
 
+    // ✅ NEW: Handle search mode back navigation
+    BackHandler(enabled = isSearching) {
+        viewModel.setSearching(false)
+    }
+
     // Handle system back button - close swipe if revealed
     BackHandler(enabled = revealedEntryId != null) {
         revealedEntryId = null
@@ -137,7 +149,14 @@ fun HomeScreen(
                     // This calls the same refresh function as pull-to-refresh
                     viewModel.refreshFiles()
                 },
-                isRefreshing = isRefreshing
+                isRefreshing = isRefreshing,
+                // ✅ NEW: Search parameters
+                isSearching = isSearching,
+                searchQuery = searchQuery,
+                onSearchQueryChange = { viewModel.setSearchQuery(it) },
+                onSearchStart = { viewModel.setSearching(true) },
+                onSearchEnd = { viewModel.setSearching(false) },
+                isSearchLoading = isSearchLoading
             )
         },
         snackbarHost = {
@@ -173,7 +192,7 @@ fun HomeScreen(
         },
         floatingActionButton = {
             // Only show FAB when in normal state
-            if (uiState is HomeUiState.Normal) {
+            if (uiState is HomeUiState.Normal && !isSearching) {
                 FloatingActionButton(
                     onClick = {
                         revealedEntryId = null
@@ -234,116 +253,111 @@ fun HomeScreen(
                         )
                     }
                 } else {
-                    // ✅ NEW: Create Box to contain both PullToRefreshBox and CustomScrollbar
+                    // ✅ NEW: Show search results or normal file list
+                    val displayEntries = if (isSearching) {
+                        // Convert search results back to DiaryEntry objects
+                        searchResults.mapNotNull { searchResult ->
+                            entries.find { it.file.uri.toString() == searchResult.uri }
+                        }
+                    } else {
+                        entries
+                    }
+
+                    // NEW: Create Box to contain both PullToRefreshBox and CustomScrollbar
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(padding)
                     ) {
-                        // ✅ NEW: Remember LazyListState for scrollbar tracking
+
+                        // NEW: Remember LazyListState for scrollbar tracking
                         val lazyListState = rememberLazyListState()
-                        // Wrap LazyColumn with PullToRefreshBox
-                        PullToRefreshBox(
-                            isRefreshing = isRefreshing,
-                            onRefresh = {
-                                // Dismiss any revealed swipe actions
-                                revealedEntryId = null
-                                viewModel.refreshFiles()
-                            },
-                            modifier = Modifier.fillMaxSize(),
-                            state = pullToRefreshState,
-                            indicator = {
-                                PullToRefreshDefaults.Indicator(
-                                    modifier = Modifier.align(Alignment.TopCenter),
+
+                        // ✅ NEW: Only enable pull-to-refresh when not searching
+                        if (!isSearching) {
+                            // Wrap LazyColumn with PullToRefreshBox
+                            PullToRefreshBox(
+                                isRefreshing = isRefreshing,
+                                onRefresh = {
+                                    // Dismiss any revealed swipe actions
+                                    revealedEntryId = null
+                                    viewModel.refreshFiles()
+                                },
+                                modifier = Modifier.fillMaxSize(),
+                                state = pullToRefreshState,
+                                indicator = {
+                                    PullToRefreshDefaults.Indicator(
+                                        modifier = Modifier.align(Alignment.TopCenter),
+                                        isRefreshing = isRefreshing,
+                                        state = pullToRefreshState,
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        color = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                }
+                            ) {
+                                FileListContent(
+                                    displayEntries = displayEntries,
                                     isRefreshing = isRefreshing,
-                                    state = pullToRefreshState,
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    color = MaterialTheme.colorScheme.onPrimary
+                                    lazyListState = lazyListState,
+                                    revealedEntryId = revealedEntryId,
+                                    onRevealedEntryIdChange = { revealedEntryId = it },
+                                    onItemClick = { entry ->
+                                        revealedEntryId = null
+                                        val intent = Intent(context, EditorActivity::class.java).apply {
+                                            putExtra("file_uri", entry.file.uri.toString())
+                                        }
+                                        editorLauncher.launch(intent)
+                                    },
+                                    onRename = { entry ->
+                                        entryToRename = entry
+                                        revealedEntryId = null
+                                    },
+                                    onDelete = { entry ->
+                                        entryToDelete = entry
+                                        revealedEntryId = null
+                                    }
                                 )
                             }
-                        ) {
-                            LazyColumn(
-                                modifier = Modifier
-                                    .fillMaxSize(),  // This ensures full screen coverage for pull to refresh
-                                contentPadding = PaddingValues(horizontal = 4.dp),
-                                userScrollEnabled = !isRefreshing,  // Disable user scrolling while refreshing
-                                overscrollEffect = null,
-                                state = lazyListState, // ✅ NEW: Add state for scrollbar tracking
-                            ) {
-                                if (entries.isEmpty()) {
-                                    item {
-                                        Column(
-                                            modifier = Modifier
-                                                .fillParentMaxSize()
-                                                .padding(16.dp),
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.Center
-                                        ) {
-                                            Text(
-                                                text = "Welcome to EchoSpace!",
-                                                style = MaterialTheme.typography.headlineMedium
-                                            )
-                                        }
+                        } else {
+                            // ✅ NEW: Search mode - no pull to refresh
+                            FileListContent(
+                                displayEntries = displayEntries,
+                                isRefreshing = false,
+                                lazyListState = lazyListState,
+                                revealedEntryId = revealedEntryId,
+                                onRevealedEntryIdChange = { revealedEntryId = it },
+                                onItemClick = { entry ->
+                                    revealedEntryId = null
+                                    val intent = Intent(context, EditorActivity::class.java).apply {
+                                        putExtra("file_uri", entry.file.uri.toString())
                                     }
-                                } else {
-                                    items(
-                                        items = entries,
-                                        key = { it.file.uri },
-                                        contentType = { "diary_entry" } // for better recycling
-                                    ) { entry ->
-                                        val isRevealed =
-                                            revealedEntryId == entry.file.uri.toString()
-
-                                        SwipeableDiaryListItem(
-                                            entry = entry,
-                                            onItemClick = {
-                                                revealedEntryId = null
-                                                val intent =
-                                                    Intent(
-                                                        context,
-                                                        EditorActivity::class.java
-                                                    ).apply {
-                                                        putExtra(
-                                                            "file_uri",
-                                                            entry.file.uri.toString()
-                                                        )
-                                                    }
-                                                editorLauncher.launch(intent)
-                                            },
-                                            onRename = {
-                                                entryToRename = entry
-                                                revealedEntryId = null
-                                            },
-                                            onDelete = {
-                                                entryToDelete = entry
-                                                revealedEntryId = null
-                                            },
-                                            isRevealed = isRevealed,
-                                            onRevealChange = { shouldReveal ->
-                                                revealedEntryId =
-                                                    if (shouldReveal) entry.file.uri.toString() else null
-                                            },
-                                            isSwipeEnabled = !isRefreshing  // Disable swipe when refreshing
-                                        )
-                                        //HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                                    }
+                                    editorLauncher.launch(intent)
+                                },
+                                onRename = { entry ->
+                                    entryToRename = entry
+                                    revealedEntryId = null
+                                },
+                                onDelete = { entry ->
+                                    entryToDelete = entry
+                                    revealedEntryId = null
                                 }
-                            } // lazy column ending
-                        } // pull refresh ending
-                        // ✅ NEW: Add CustomScrollbar overlay
+                            )
+                        }
+
+                        // NEW: Add CustomScrollbar overlay
                         CustomScrollbar(
                             listState = lazyListState,
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
                                 .fillMaxHeight()
-                                .padding(top = 0.dp,end = 2.dp,bottom = 0.dp), // Small padding from screen edge
+                                .padding(top = 0.dp, end = 2.dp, bottom = 0.dp), // Small padding from screen edge
                             thickness = 4.dp, // Minimal thickness like Gmail
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
                     }
-                } // else ending
-            } // ui home state normal ending
-        } // when ending
+                }
+            }
+        }
     }
 
     // --- Dialog Implementations ---
@@ -371,9 +385,9 @@ fun HomeScreen(
                     val file = viewModel.createEntry(fileName)
                     if (file != null) {
                         showCreateDialog = false
-                        val timeFormatter = SimpleDateFormat("hh:mm a", Locale.getDefault())
+                        val timeFormatter = SimpleDateFormat("h:mm a", Locale.getDefault())
                         val timestamp = timeFormatter.format(Date())
-                        val initialContent = "# $fileName $timestamp\n\n"
+                        val initialContent = "$fileName\n$timestamp\n\n"
                         val intent = Intent(context, EditorActivity::class.java).apply {
                             putExtra("file_uri", file.uri.toString())
                             putExtra("start_in_edit_mode", true)
@@ -410,16 +424,75 @@ fun HomeScreen(
         AlertDialog(
             onDismissRequest = { entryToDelete = null },
             title = { Text("Delete File") },
-            text = { Text("Are you sure you want to delete '${entry.name}'?") },
+            text = { Text("Are you sure you want to delete ${entry.name}?") },
             confirmButton = {
-                Button(onClick = {
-                    viewModel.deleteEntry(entry)
-                    entryToDelete = null
-                }) { Text("Delete") }
+                Button(
+                    onClick = {
+                        viewModel.deleteEntry(entry)
+                        entryToDelete = null
+                    }
+                ) {
+                    Text("Delete")
+                }
             },
             dismissButton = {
-                TextButton(onClick = { entryToDelete = null }) { Text("Cancel") }
+                TextButton(onClick = { entryToDelete = null }) {
+                    Text("Cancel")
+                }
             }
         )
+    }
+}
+
+// ✅ NEW: Extracted file list content for reuse
+@Composable
+private fun FileListContent(
+    displayEntries: List<DiaryEntry>,
+    //isSearching: Boolean,
+    isRefreshing: Boolean,
+    lazyListState: androidx.compose.foundation.lazy.LazyListState,
+    revealedEntryId: String?,
+    onRevealedEntryIdChange: (String?) -> Unit,
+    onItemClick: (DiaryEntry) -> Unit,
+    onRename: (DiaryEntry) -> Unit,
+    onDelete: (DiaryEntry) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 4.dp),
+        userScrollEnabled = !isRefreshing, // Disable user scrolling while refreshing
+        overscrollEffect = null,
+        state = lazyListState
+    ) {
+        items(
+            items = displayEntries,
+            key = { it.file.uri },
+            contentType = { "diary_entry" } // for better recycling
+        ) { entry ->
+            val isRevealed = revealedEntryId == entry.file.uri.toString()
+
+            SwipeableDiaryListItem(
+                entry = entry,
+                onItemClick = {
+                    onRevealedEntryIdChange(null)
+                    onItemClick(entry)
+                },
+                onRename = {
+                    onRename(entry)
+                },
+                onDelete = {
+                    onDelete(entry)
+                },
+                isRevealed = isRevealed,
+                onRevealChange = { shouldReveal ->
+                    onRevealedEntryIdChange(
+                        if (shouldReveal) entry.file.uri.toString() else null
+                    )
+                },
+                isSwipeEnabled = !isRefreshing // Disable swipe when refreshing
+            )
+
+            //HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+        }
     }
 }

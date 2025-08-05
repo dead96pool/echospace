@@ -3,18 +3,22 @@ package com.chani.echospace.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-//import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -30,171 +34,291 @@ fun SlimTopBar(
     onThemeToggle: () -> Unit = {},
     onSortClick: () -> Unit,
     onRefreshClick: () -> Unit,
-    isRefreshing: Boolean
+    isRefreshing: Boolean,
+    // NEW: Search-related parameters
+    isSearching: Boolean = false,
+    searchQuery: String = "",
+    onSearchQueryChange: (String) -> Unit = {},
+    onSearchStart: () -> Unit = {},
+    onSearchEnd: () -> Unit = {},
+    isSearchLoading: Boolean = false
 ) {
     var showDropdown by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .statusBarsPadding()        // add the top bar below the android status bar
+            .statusBarsPadding() // add the top bar below the android status bar
     ) {
         // Main top bar content
         Surface(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth(),
             color = MaterialTheme.colorScheme.background
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .height(52.dp)
+                    .padding(horizontal = 16.dp, vertical = 0.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Title
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 18.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f)
-                )
 
-                // Three-dot menu button
-                Box {
-                    IconButton(
-                        onClick = { showDropdown = true },
-                        modifier = Modifier.size(32.dp)
+                if (!isSearching) {
+                    // Normal mode: Title + Search & Menu icons
+
+                    // Title
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 18.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    // Right side icons: Search + Menu
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Menu",
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        // Search icon button
+                        IconButton(
+                            onClick = onSearchStart,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        // Three-dot menu button
+                        Box {
+                            IconButton(
+                                onClick = { showDropdown = true },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "Menu",
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            // Dropdown menu (same as before)
+                            DropdownMenu(
+                                expanded = showDropdown,
+                                onDismissRequest = { showDropdown = false },
+                                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                            ) {
+                                // Refresh option
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Refresh,
+                                                contentDescription = null,
+                                                tint = if (isRefreshing) {
+                                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                                } else {
+                                                    MaterialTheme.colorScheme.onSurface
+                                                },
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Text(
+                                                text = "Refresh",
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        if (!isRefreshing) {
+                                            onRefreshClick()
+                                            showDropdown = false
+                                        }
+                                    },
+                                    enabled = !isRefreshing
+                                )
+
+                                // Theme toggle option
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Text(
+                                                text = if (isDarkTheme) "Light Mode" else "Dark Mode",
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        onThemeToggle()
+                                        showDropdown = false
+                                    }
+                                )
+
+                                // Sort option
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Filled.Sort,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Text(
+                                                text = "Sort Files",
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        onSortClick()
+                                        showDropdown = false
+                                    }
+                                )
+
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 8.dp),
+                                    thickness = 0.5.dp,
+                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                )
+
+                                // Settings page option
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Settings,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Text(
+                                                text = "Settings",
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        // Navigate to settings page
+                                    }
+                                )
+                            }
+                        }
                     }
 
-                    // Dropdown menu
-                    DropdownMenu(
-                        expanded = showDropdown,
-                        onDismissRequest = { showDropdown = false },
-                        modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                } else {
+                    // Search mode: Back arrow + Search TextField
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 0.dp, vertical = 0.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Refresh option
-                        DropdownMenuItem(
-                            text = {
+                        // Back arrow button
+                        IconButton(
+                            onClick = onSearchEnd,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+                        // Search TextField with proper focus management
+                        val focusRequester = remember { FocusRequester() }
+
+                        // Search TextField
+                        TextField(
+                            value = searchQuery,
+                            onValueChange = onSearchQueryChange,
+                            modifier = Modifier
+                                //.weight(1f)
+                                .focusRequester(focusRequester),
+                            placeholder = {
+                                Text(
+                                    text = "Search files and content...",
+                                    style = MaterialTheme.typography.bodyLarge, // Smaller text style
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+                                )
+                            },
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            singleLine = true,
+                            trailingIcon = {
                                 Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Refresh,
-                                        contentDescription = null,
-                                        tint = if (isRefreshing) {
-                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) // Grayed out
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface
-                                        },
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Text(
-                                        text = "Refresh",
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
+                                    // Show loading spinner when searching
+                                    if (isSearchLoading) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            strokeWidth = 2.dp,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+
+                                    // Show clear button when there's text
+                                    if (searchQuery.isNotEmpty()) {
+                                        IconButton(
+                                            onClick = { onSearchQueryChange("") },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Clear,
+                                                contentDescription = "Clear search",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             },
-                            onClick = {
-                                if (!isRefreshing) {
-                                    onRefreshClick()
-                                }
-                                showDropdown = false
-                            },
-                            enabled = !isRefreshing
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                cursorColor = MaterialTheme.colorScheme.primary
+                            )
                         )
 
-                        // Theme toggle option
-                        DropdownMenuItem(
-                            text = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = if (isDarkTheme)
-                                            Icons.Default.LightMode
-                                        else
-                                            Icons.Default.DarkMode,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Text(
-                                        text = if (isDarkTheme) "Light Mode" else "Dark Mode",
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                }
-                            },
-                            onClick = {
-                                onThemeToggle()
-                                showDropdown = false
-                            }
-                        )
-
-                        // Sort option
-                        DropdownMenuItem(
-                            text = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.Sort,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Text(
-                                        text = "Sort Files",
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                }
-                            },
-                            onClick = {
-                                onSortClick()
-                                showDropdown = false
-                            }
-                        )
-
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 8.dp),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                        )
-
-                        // Settings page option
-                        DropdownMenuItem(
-                            text = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Settings,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Text(
-                                        text = "Settings",
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                }
-                            },
-                            onClick = { /* Navigate to settings page */ }
-                        )
-
+                        // ✅ ADD: Automatic focus when search mode activates
+                        LaunchedEffect(Unit) {
+                            focusRequester.requestFocus()
+                        }
                     }
                 }
             }

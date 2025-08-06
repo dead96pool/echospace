@@ -1,7 +1,4 @@
 basic functionality:
-- show search snippets
-- get last modified metadata from android document system
-- fix the 1 day ago and yesterday in metadata display
 - virtual File organization/folders using hashtags
 - auto add hashtags in file content
 - Export/import features

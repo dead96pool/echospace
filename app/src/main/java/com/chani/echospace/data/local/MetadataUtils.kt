@@ -3,6 +3,9 @@ package com.chani.echospace.data.local
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 
 object MetadataUtils {
 
@@ -70,38 +73,31 @@ object MetadataUtils {
         val date = Date(timestamp)
         val now = Date()
 
-        val calendarDate = Calendar.getInstance().apply { time = date }
-        val calendarNow = Calendar.getInstance().apply { time = now }
-
-        val todayDay = calendarNow.get(Calendar.DAY_OF_YEAR)
-        val todayYear = calendarNow.get(Calendar.YEAR)
-
-        val dateDay = calendarDate.get(Calendar.DAY_OF_YEAR)
-        val dateYear = calendarDate.get(Calendar.YEAR)
+        // Convert to LocalDate for proper calendar-based comparison
+        val dateLocal = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+        val todayLocal = now.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
 
         return when {
-            // Today
-            todayDay == dateDay && todayYear == dateYear -> {
+            // Today - same calendar date
+            dateLocal.isEqual(todayLocal) -> {
                 SimpleDateFormat("hh.mma", Locale.getDefault())
                     .format(date)
                     .lowercase(Locale.getDefault())
+                    .replace("a.m.", "am")
+                    .replace("p.m.", "pm")
             }
-            // Yesterday
-            todayYear == dateYear && todayDay - dateDay == 1 -> {
-                "Yesterday"
+
+            // Yesterday - exactly 1 calendar day difference
+            dateLocal.isEqual(todayLocal.minusDays(1)) -> {
+                "yesterday"
             }
-            // Handles Dec 31/Jan 1 across years
-            todayYear - dateYear == 1 &&
-                    todayDay == 1 &&
-                    calendarDate.getActualMaximum(Calendar.DAY_OF_YEAR) == dateDay -> {
-                "Yesterday"
-            }
-            // x days ago
+
+            // Multiple days ago - accurate calendar-based calculation
             else -> {
-                val millisDiff = now.time - date.time
-                val daysDiff = TimeUnit.MILLISECONDS.toDays(millisDiff).toInt()
+                val daysDiff = ChronoUnit.DAYS.between(dateLocal, todayLocal).toInt()
                 "$daysDiff days ago"
             }
         }
     }
+
 }

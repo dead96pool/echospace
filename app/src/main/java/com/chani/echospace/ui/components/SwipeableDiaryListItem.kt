@@ -32,7 +32,8 @@ fun SwipeableDiaryListItem(
     onRevealChange: (Boolean) -> Unit = {},
     isSwipeEnabled: Boolean = true,
     snippet: String? = null,
-    isInSearchMode: Boolean = false
+    isInSearchMode: Boolean = false,
+    searchQuery: String = ""
 ) {
     val density = LocalDensity.current
     val actionButtonWidth = with(density) { 59.5.dp.toPx() }
@@ -119,7 +120,8 @@ fun SwipeableDiaryListItem(
                     }
                 },
                 snippet = snippet,
-                isInSearchMode = isInSearchMode
+                isInSearchMode = isInSearchMode,
+                searchQuery = searchQuery
             )
         }
     }

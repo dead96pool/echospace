@@ -321,7 +321,7 @@ fun HomeScreen(
                                         revealedEntryId = null
                                     },
                                     isInSearching = false,
-                                    searchQuery = searchQuery,
+                                    searchQuery = "",
                                     snippetMap = snippetMap
                                 )
                             }
@@ -562,7 +562,8 @@ private fun FileListContent(
                     },
                     isSwipeEnabled = !isRefreshing,
                     snippet = snippet,
-                    isInSearchMode = isInSearching
+                    isInSearchMode = isInSearching,
+                    searchQuery = searchQuery
                 )
             }
         }

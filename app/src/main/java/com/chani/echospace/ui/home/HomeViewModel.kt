@@ -150,19 +150,22 @@ class HomeViewModel @Inject constructor(
         if (query.isBlank()) return
 
         _isSearchLoading.value = true
-
         try {
             withContext(Dispatchers.IO) {
                 val results = mutableListOf<SearchResultItem>()
                 val allEntries = entries.value
-                val lowerQuery = query.lowercase()
+                val lowerQuery = query.lowercase().trim()
 
-                // Step 1: Find filename matches first
+                // Support both phrase and individual word matching
+                val searchWords = lowerQuery.split(Regex("\\s+")).filter { it.isNotBlank() }
+
+                // Step 1: Find filename matches
                 val nameMatches = allEntries.filter { entry ->
-                    entry.name.lowercase().contains(lowerQuery)
+                    val lowerName = entry.name.lowercase()
+                    // Check if filename contains all search words (in any order)
+                    searchWords.all { word -> lowerName.contains(word) }
                 }
 
-                // Add filename matches as SearchResultItem objects
                 nameMatches.forEach { entry ->
                     results.add(
                         SearchResultItem(
@@ -174,28 +177,35 @@ class HomeViewModel @Inject constructor(
                     )
                 }
 
-                // Step 2: Find content matches (excluding name matches)
+                // Step 2: Find content matches
                 for (entry in allEntries) {
                     if (!nameMatches.contains(entry)) {
                         try {
-                            // Check cache first
                             val content = contentCache.get(entry.file.uri.toString()) ?: run {
-                                // Load from disk and cache it
                                 val fileContent = diaryRepository.readContent(entry.file)
                                 contentCache.put(entry.file.uri.toString(), fileContent)
                                 fileContent
                             }
 
-                            if (content.lowercase().contains(lowerQuery)) {
-                                // Extract plain snippets
-                                val plainSnippet = extractSnippet(content, lowerQuery)
+                            val lowerContent = content.lowercase()
 
+                            // Multi-word search logic
+                            val hasMatch = if (searchWords.size == 1) {
+                                // Single word search
+                                lowerContent.contains(searchWords[0])
+                            } else {
+                                // Multi-word search: check if ALL words are present (in any order)
+                                searchWords.all { word -> lowerContent.contains(word) }
+                            }
+
+                            if (hasMatch) {
+                                val (snippet, _) = extractSnippetWithHighlight(content, lowerQuery)
                                 results.add(
                                     SearchResultItem(
                                         uri = entry.file.uri.toString(),
                                         title = entry.name,
-                                        snippet = plainSnippet, // Keep existing for compatibility
-                                        score = 0.8f
+                                        snippet = snippet,
+                                        score = if (searchWords.size == 1) 0.8f else 0.9f // Higher score for multi-word matches
                                     )
                                 )
                             }
@@ -205,7 +215,8 @@ class HomeViewModel @Inject constructor(
                     }
                 }
 
-                _searchResults.value = results
+                // Sort results by relevance score
+                _searchResults.value = results.sortedByDescending { it.score }
             }
         } catch (e: Exception) {
             Log.e("HomeViewModel", "Search failed", e)
@@ -215,19 +226,51 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    // Helper function to extract snippet around search match
-    private fun extractSnippet(content: String, query: String): String {
+//    // Helper function to extract snippet around search match
+//    private fun extractSnippet(content: String, query: String): String {
+//        val words = content.split(Regex("\\s+"))
+//        val wordsLower = words.map { it.lowercase(Locale.getDefault()) }
+//        val lowerQuery = query.lowercase(Locale.getDefault())
+//
+//        // Find first word that contains the query
+//        val matchIndex = wordsLower.indexOfFirst { word -> word.contains(lowerQuery) }
+//
+//        if (matchIndex == -1) {
+//            return content.take(100) + if (content.length > 100) "..." else ""
+//        }
+//
+//        val contextBefore = 3
+//        val contextAfter = 4
+//        val startIndex = maxOf(0, matchIndex - contextBefore)
+//        val endIndex = minOf(words.size - 1, matchIndex + contextAfter)
+//
+//        val snippetWords = words.subList(startIndex, endIndex + 1)
+//        val snippet = snippetWords.joinToString(" ")
+//
+//        val prefix = if (startIndex > 0) "..." else ""
+//        val suffix = if (endIndex < words.size - 1) "..." else ""
+//
+//        return "$prefix$snippet$suffix"
+//    }
+
+    private fun extractSnippetWithHighlight(content: String, query: String): Pair<String, IntRange?> {
         val words = content.split(Regex("\\s+"))
         val wordsLower = words.map { it.lowercase(Locale.getDefault()) }
-        val lowerQuery = query.lowercase(Locale.getDefault())
+        val lowerQuery = query.lowercase(Locale.getDefault()).trim()
+        val queryWords = lowerQuery.split(Regex("\\s+")).filter { it.isNotBlank() }
 
-        // Find first word that contains the query
-        val matchIndex = wordsLower.indexOfFirst { word -> word.contains(lowerQuery) }
-
-        if (matchIndex == -1) {
-            return content.take(100) + if (content.length > 100) "..." else ""
+        // Find the best match position for multi-word queries
+        val matchIndex = if (queryWords.size == 1) {
+            // Single word: find first containing word
+            wordsLower.indexOfFirst { word -> word.contains(queryWords[0]) }
+        } else {
+            // Multi-word: find first word that matches any of the query words
+            wordsLower.indexOfFirst { word ->
+                queryWords.any { queryWord -> word.contains(queryWord) }
+            }
         }
 
+        // Extract context around the match
         val contextBefore = 3
         val contextAfter = 4
         val startIndex = maxOf(0, matchIndex - contextBefore)
@@ -238,8 +281,9 @@ class HomeViewModel @Inject constructor(
 
         val prefix = if (startIndex > 0) "..." else ""
         val suffix = if (endIndex < words.size - 1) "..." else ""
+        val finalSnippet = "$prefix$snippet$suffix"
 
-        return "$prefix$snippet$suffix"
+        return finalSnippet to null
     }
 
     // updated for folder access management

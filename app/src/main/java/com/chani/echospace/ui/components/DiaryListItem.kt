@@ -23,6 +23,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.chani.echospace.domain.model.DiaryEntry
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.withStyle
+import java.util.Locale
 
 @Composable
 fun DiaryListItem(
@@ -30,7 +37,8 @@ fun DiaryListItem(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
     snippet: String? = null,
-    isInSearchMode: Boolean = false
+    isInSearchMode: Boolean = false,
+    searchQuery: String = ""
 ) {
     // Pre-calculate and cache metadata during composition
     val metadataText = remember(entry.wordCount, entry.lastModifiedDisplay) {
@@ -85,14 +93,13 @@ fun DiaryListItem(
                         )
                     }
                 } else if (!snippet.isNullOrBlank()) {
-                    // Fallback: Display plain snippet
+                    // Content match with highlighting
                     Text(
-                        text = "\"$snippet\"",
+                        text = createHighlightedSnippet(snippet, searchQuery),
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontSize = 12.sp,
                             fontStyle = FontStyle.Italic
                         ),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(top = 4.dp)
@@ -130,4 +137,66 @@ private fun buildMetadataText(entry: DiaryEntry): String {
     }
 
     return parts.joinToString("  |  ")
+}
+
+
+private fun createHighlightedSnippet(snippet: String, searchQuery: String): AnnotatedString {
+    if (searchQuery.isBlank()) {
+        return AnnotatedString(snippet)
+    }
+
+    return buildAnnotatedString {
+        //val lowerSnippet = snippet.lowercase(Locale.getDefault())
+        val queryWords = searchQuery.lowercase(Locale.getDefault())
+            .split(Regex("\\s+"))
+            .filter { it.isNotBlank() }
+
+        val lowerProcessedText = snippet.lowercase(Locale.getDefault())
+
+        // Highlight all query words
+        val highlightRanges = mutableListOf<Pair<IntRange, String>>()
+
+        // Find all occurrences of each query word
+        queryWords.forEach { queryWord ->
+            var lastIndex = 0
+            var matchIndex = lowerProcessedText.indexOf(queryWord, lastIndex)
+
+            while (matchIndex != -1) {
+                val range = matchIndex until (matchIndex + queryWord.length)
+                highlightRanges.add(range to queryWord)
+                lastIndex = matchIndex + 1
+                matchIndex = lowerProcessedText.indexOf(queryWord, lastIndex)
+            }
+        }
+
+        // Sort ranges by start position to process them in order
+        val sortedRanges = highlightRanges.sortedBy { it.first.first }
+
+        var lastEnd = 0
+
+        sortedRanges.forEach { (range, _) ->
+            // Add text before highlight
+            if (range.first > lastEnd) {
+                append(snippet.substring(lastEnd, range.first))
+            }
+
+            // Add highlighted text
+            withStyle(
+                style = SpanStyle(
+                    background = Color(0xFF4285F4).copy(alpha = 0.3f),
+                    color = Color(0xFF1A73E8),
+                    fontWeight = FontWeight.Medium
+                )
+            ) {
+                append(snippet.substring(range.first, range.last + 1))
+            }
+
+            lastEnd = range.last + 1
+        }
+
+        // Add remaining text
+        if (lastEnd < snippet.length) {
+            append(snippet.substring(lastEnd))
+        }
+    }
 }

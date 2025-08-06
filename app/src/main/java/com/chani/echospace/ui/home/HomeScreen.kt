@@ -39,6 +39,7 @@ import com.chani.echospace.ui.components.SlimTopBar
 import com.chani.echospace.ui.components.SwipeableDiaryListItem
 import com.chani.echospace.ui.editor.EditorActivity
 import com.chani.echospace.ui.theme.ThemeViewModel
+import com.chani.echospace.ui.settings.SettingsActivity
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -102,7 +103,6 @@ fun HomeScreen(
         }
     }
 
-
     // Handle refresh result with snackbar
     LaunchedEffect(refreshResult) {
         refreshResult?.let { result ->
@@ -154,6 +154,11 @@ fun HomeScreen(
                     viewModel.refreshFiles()
                 },
                 isRefreshing = isRefreshing,
+                onSettingsClick = {
+                    // Launch SettingsActivity with the same pattern as file clicking
+                    val intent = Intent(context, SettingsActivity::class.java)
+                    context.startActivity(intent)
+                },
                 isSearching = isSearching,
                 searchQuery = searchQuery,
                 onSearchQueryChange = { viewModel.setSearchQuery(it) },

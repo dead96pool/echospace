@@ -22,7 +22,7 @@ class FileManager @Inject constructor(
 
     private val sharedPrefs = context.getSharedPreferences("echospace_prefs", Context.MODE_PRIVATE)
 
-    private fun getFolderUri(): Uri? {
+    fun getFolderUri(): Uri? {
         val uriString = sharedPrefs.getString("folder_uri", null)
         return uriString?.toUri()
     }

@@ -40,6 +40,7 @@ fun SlimTopBar(
     onSortClick: () -> Unit,
     onRefreshClick: () -> Unit,
     isRefreshing: Boolean,
+    onSettingsClick: () -> Unit = { },
     isSearching: Boolean = false,
     searchQuery: String = "",
     onSearchQueryChange: (String) -> Unit = {},
@@ -229,7 +230,8 @@ fun SlimTopBar(
                                         }
                                     },
                                     onClick = {
-                                        // Navigate to settings page
+                                        onSettingsClick() // Call the settings navigation
+                                        showDropdown = false
                                     }
                                 )
                             }

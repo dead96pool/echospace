@@ -2,6 +2,8 @@ package com.chani.echospace.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Sort
@@ -21,7 +23,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -35,7 +40,6 @@ fun SlimTopBar(
     onSortClick: () -> Unit,
     onRefreshClick: () -> Unit,
     isRefreshing: Boolean,
-    // NEW: Search-related parameters
     isSearching: Boolean = false,
     searchQuery: String = "",
     onSearchQueryChange: (String) -> Unit = {},
@@ -81,7 +85,7 @@ fun SlimTopBar(
 
                     // Right side icons: Search + Menu
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Search icon button
@@ -93,7 +97,7 @@ fun SlimTopBar(
                                 imageVector = Icons.Default.Search,
                                 contentDescription = "Search",
                                 tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(25.dp)
                             )
                         }
 
@@ -107,7 +111,7 @@ fun SlimTopBar(
                                     imageVector = Icons.Default.MoreVert,
                                     contentDescription = "Menu",
                                     tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(25.dp)
                                 )
                             }
 
@@ -257,6 +261,7 @@ fun SlimTopBar(
                         Spacer(modifier = Modifier.width(8.dp))
                         // Search TextField with proper focus management
                         val focusRequester = remember { FocusRequester() }
+                        val keyboardController = LocalSoftwareKeyboardController.current
 
                         // Search TextField
                         TextField(
@@ -276,6 +281,19 @@ fun SlimTopBar(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             ),
                             singleLine = true,
+                            // Keyboard options to show search icon
+                            keyboardOptions = KeyboardOptions(
+                                imeAction = ImeAction.Search,
+                                keyboardType = KeyboardType.Text
+                            ),
+                            // Handle search action when user taps search button
+                            keyboardActions = KeyboardActions(
+                                onSearch = {
+                                    // The search is already handled by the debounced onSearchQueryChange
+                                    // So we just need to hide the keyboard or perform any additional action
+                                    keyboardController?.hide()
+                                }
+                            ),
                             trailingIcon = {
                                 Row(
                                     horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -315,7 +333,7 @@ fun SlimTopBar(
                             )
                         )
 
-                        // ✅ ADD: Automatic focus when search mode activates
+                        // Automatic focus when search mode activates
                         LaunchedEffect(Unit) {
                             focusRequester.requestFocus()
                         }

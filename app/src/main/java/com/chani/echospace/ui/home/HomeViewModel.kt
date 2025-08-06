@@ -34,6 +34,7 @@ sealed class RefreshResult {
     data class Success(val totalFiles: Int, val newFiles: Int) : RefreshResult()
     data class Error(val message: String) : RefreshResult()
 }
+
 // UI state for folder access management
 sealed class HomeUiState {
     data object Normal : HomeUiState()
@@ -108,7 +109,7 @@ class HomeViewModel @Inject constructor(
             }
         }
 
-        // NEW: Search query observer with debounce
+        // Search query observer with debounce
         viewModelScope.launch {
             _searchQuery
                 .debounce(300) // Wait 300ms after user stops typing
@@ -124,7 +125,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    // ======= NEW SEARCH FUNCTIONS =======
+    // ======= SEARCH FUNCTIONS =======
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
@@ -345,14 +346,14 @@ class HomeViewModel @Inject constructor(
 //        _refreshResult.value = null
 //    }
 
-    // NEW: Function to handle folder reselection
+    // Function to handle folder reselection
     private fun onFolderReselected() {
         _uiState.value = HomeUiState.Normal
         _isLoadingEntries.value = true // Show loading during folder recovery
         loadEntries()
     }
 
-    // NEW: Function to handle folder selection (will be used by HomeScreen)
+    // Function to handle folder selection (will be used by HomeScreen)
     fun onFolderSelected(uri: Uri) {
         viewModelScope.launch {
             try {

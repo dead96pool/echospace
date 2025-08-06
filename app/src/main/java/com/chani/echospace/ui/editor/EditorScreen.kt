@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -56,6 +57,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.chani.echospace.ui.components.CustomScrollbar
 import com.chani.echospace.ui.components.MarkdownText
 import com.chani.echospace.ui.icons.CustomIcons
 import kotlinx.coroutines.delay
@@ -251,109 +253,127 @@ fun EditorScreen(
                 .padding(padding)
                 .imePadding()
         ) {
-            Box(
+            Box(                // box just for the scrollbar
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp)
+                    .padding(0.dp)
             ) {
-                if (isLoading) {
-                    // Show loading indicator while content is being loaded
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                } else {
-                    if (isEditMode) {
-                        BasicTextField(
-                            value = textFieldValue,
-                            onValueChange = { newValue ->
-                                // Update ViewModel instead of local state
-                                viewModel.updateTextContent(newValue)
-                            },
-                            onTextLayout = { layoutResult ->
-                                if (textFieldValue.selection.start >= 0) {
-                                    val cursorRect =
-                                        layoutResult.getCursorRect(textFieldValue.selection.start)
-                                    val adjustedRect = cursorRect.copy(
-                                        bottom = cursorRect.bottom + bufferPx
-                                    )
-                                    scope.launch {
-                                        bringIntoViewRequester.bringIntoView(adjustedRect)
-                                    }
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .verticalScroll(editScrollState)
-                                .focusRequester(focusRequester)
-                                .bringIntoViewRequester(bringIntoViewRequester)
-                                .onFocusChanged { focusState ->
-                                    if (focusState.isFocused) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                ) {
+                    if (isLoading) {
+                        // Show loading indicator while content is being loaded
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    } else {
+                        if (isEditMode) {
+                            BasicTextField(
+                                value = textFieldValue,
+                                onValueChange = { newValue ->
+                                    // Update ViewModel instead of local state
+                                    viewModel.updateTextContent(newValue)
+                                },
+                                onTextLayout = { layoutResult ->
+                                    if (textFieldValue.selection.start >= 0) {
+                                        val cursorRect =
+                                            layoutResult.getCursorRect(textFieldValue.selection.start)
+                                        val adjustedRect = cursorRect.copy(
+                                            bottom = cursorRect.bottom + bufferPx
+                                        )
                                         scope.launch {
-                                            delay(300)
-                                            bringIntoViewRequester.bringIntoView()
+                                            bringIntoViewRequester.bringIntoView(adjustedRect)
                                         }
                                     }
                                 },
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                color = MaterialTheme.colorScheme.onBackground
-                            ),
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
-                        )
-                    } else {
-                        // Read-only mode with markdown parsing
-                        // Show empty state if no content
-                        if (textFieldValue.text.isBlank()) {
-                            // ✅ Enhanced empty state with better visual design
-                            Column(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(32.dp), // Extra padding for breathing room
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                // Empty file icon
-                                Icon(
-                                    imageVector = CustomIcons.UnknownDocument, // Document icon
-                                    contentDescription = null,
+                                    .verticalScroll(editScrollState)
+                                    .focusRequester(focusRequester)
+                                    .bringIntoViewRequester(bringIntoViewRequester)
+                                    .onFocusChanged { focusState ->
+                                        if (focusState.isFocused) {
+                                            scope.launch {
+                                                delay(300)
+                                                bringIntoViewRequester.bringIntoView()
+                                            }
+                                        }
+                                    },
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                    color = MaterialTheme.colorScheme.onBackground
+                                ),
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
+                            )
+                        } else {
+                            // Read-only mode with markdown parsing
+                            // Show empty state if no content
+                            if (textFieldValue.text.isBlank()) {
+                                // empty state
+                                Column(
                                     modifier = Modifier
-                                        .size(64.dp)
-                                        .alpha(0.3f), // Reduced alpha for subtle look
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                        .fillMaxSize()
+                                        .padding(32.dp), // Extra padding for breathing room
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    // Empty file icon
+                                    Icon(
+                                        imageVector = CustomIcons.UnknownDocument, // Document icon
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .size(64.dp)
+                                            .alpha(0.3f), // Reduced alpha for subtle look
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
 
-                                Spacer(modifier = Modifier.height(16.dp))
+                                    Spacer(modifier = Modifier.height(16.dp))
 
-                                // Main empty message
-                                Text(
-                                    text = "No Content in File",
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.alpha(0.6f), // Reduced alpha
-                                    textAlign = TextAlign.Center
-                                )
+                                    // Main empty message
+                                    Text(
+                                        text = "No Content in File",
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.alpha(0.6f), // Reduced alpha
+                                        textAlign = TextAlign.Center
+                                    )
 
-                                Spacer(modifier = Modifier.height(8.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
 
-                                // Instruction text
-                                Text(
-                                    text = "Tap the edit button to start writing",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.alpha(0.5f), // Even more subtle
-                                    textAlign = TextAlign.Center
+                                    // Instruction text
+                                    Text(
+                                        text = "Tap the edit button to start writing",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.alpha(0.5f), // Even more subtle
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            } else {
+                                MarkdownText(
+                                    text = textFieldValue.text,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .verticalScroll(readScrollState)
                                 )
                             }
-                        } else {
-                            MarkdownText(
-                                text = textFieldValue.text,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .verticalScroll(readScrollState)
-                            )
                         }
+
                     }
-                }
+
+                }//box ending
+                // CustomScrollbar overlay for both modes
+                CustomScrollbar(
+                    scrollState = if (isEditMode) editScrollState else readScrollState,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .fillMaxHeight()
+                        .padding(top = 0.dp, end = 2.dp, bottom = 0.dp), // Small padding from screen edge
+                    thickness = 4.dp, // Minimal thickness like your HomeScreen
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
             }
-        }
+        }//column ending
     }
 }

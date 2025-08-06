@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.NoteAdd
+import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -21,7 +22,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,7 +64,7 @@ fun HomeScreen(
 
     val isLoadingEntries by viewModel.isLoadingEntries.collectAsState()
 
-    // ✅ NEW: Search state
+    // Search state
     val isSearching by viewModel.isSearching.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
@@ -124,7 +127,7 @@ fun HomeScreen(
         }
     }
 
-    // ✅ NEW: Handle search mode back navigation
+    // Handle search mode back navigation
     BackHandler(enabled = isSearching) {
         viewModel.setSearching(false)
     }
@@ -150,7 +153,6 @@ fun HomeScreen(
                     viewModel.refreshFiles()
                 },
                 isRefreshing = isRefreshing,
-                // ✅ NEW: Search parameters
                 isSearching = isSearching,
                 searchQuery = searchQuery,
                 onSearchQueryChange = { viewModel.setSearchQuery(it) },
@@ -253,7 +255,7 @@ fun HomeScreen(
                         )
                     }
                 } else {
-                    // ✅ NEW: Show search results or normal file list
+                    // Show search results or normal file list
                     val displayEntries = if (isSearching) {
                         // Convert search results back to DiaryEntry objects
                         searchResults.mapNotNull { searchResult ->
@@ -263,17 +265,17 @@ fun HomeScreen(
                         entries
                     }
 
-                    // NEW: Create Box to contain both PullToRefreshBox and CustomScrollbar
+                    // Create Box to contain both PullToRefreshBox and CustomScrollbar
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(padding)
                     ) {
 
-                        // NEW: Remember LazyListState for scrollbar tracking
+                        // Remember LazyListState for scrollbar tracking
                         val lazyListState = rememberLazyListState()
 
-                        // ✅ NEW: Only enable pull-to-refresh when not searching
+                        // Only enable pull-to-refresh when not searching
                         if (!isSearching) {
                             // Wrap LazyColumn with PullToRefreshBox
                             PullToRefreshBox(
@@ -315,11 +317,13 @@ fun HomeScreen(
                                     onDelete = { entry ->
                                         entryToDelete = entry
                                         revealedEntryId = null
-                                    }
+                                    },
+                                    isInSearching = false,
+                                    searchQuery = searchQuery
                                 )
                             }
                         } else {
-                            // ✅ NEW: Search mode - no pull to refresh
+                            // Search mode - no pull to refresh
                             FileListContent(
                                 displayEntries = displayEntries,
                                 isRefreshing = false,
@@ -340,18 +344,20 @@ fun HomeScreen(
                                 onDelete = { entry ->
                                     entryToDelete = entry
                                     revealedEntryId = null
-                                }
+                                },
+                                isInSearching = true,
+                                searchQuery = searchQuery
                             )
                         }
 
-                        // NEW: Add CustomScrollbar overlay
+                        // Add CustomScrollbar overlay
                         CustomScrollbar(
-                            listState = lazyListState,
+                            lazyListState = lazyListState, // Pass LazyListState
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
                                 .fillMaxHeight()
-                                .padding(top = 0.dp, end = 2.dp, bottom = 0.dp), // Small padding from screen edge
-                            thickness = 4.dp, // Minimal thickness like Gmail
+                                .padding(top = 0.dp, end = 2.dp, bottom = 0.dp),
+                            thickness = 4.dp,
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
                     }
@@ -385,9 +391,9 @@ fun HomeScreen(
                     val file = viewModel.createEntry(fileName)
                     if (file != null) {
                         showCreateDialog = false
-                        val timeFormatter = SimpleDateFormat("h:mm a", Locale.getDefault())
+                        val timeFormatter = SimpleDateFormat("hh:mm a", Locale.getDefault())
                         val timestamp = timeFormatter.format(Date())
-                        val initialContent = "$fileName\n$timestamp\n\n"
+                        val initialContent = "# $fileName $timestamp\n\n"
                         val intent = Intent(context, EditorActivity::class.java).apply {
                             putExtra("file_uri", file.uri.toString())
                             putExtra("start_in_edit_mode", true)
@@ -424,7 +430,7 @@ fun HomeScreen(
         AlertDialog(
             onDismissRequest = { entryToDelete = null },
             title = { Text("Delete File") },
-            text = { Text("Are you sure you want to delete ${entry.name}?") },
+            text = { Text("Are you sure you want to delete '${entry.name}'?") },
             confirmButton = {
                 Button(
                     onClick = {
@@ -444,18 +450,19 @@ fun HomeScreen(
     }
 }
 
-// ✅ NEW: Extracted file list content for reuse
+
 @Composable
 private fun FileListContent(
     displayEntries: List<DiaryEntry>,
-    //isSearching: Boolean,
     isRefreshing: Boolean,
     lazyListState: androidx.compose.foundation.lazy.LazyListState,
     revealedEntryId: String?,
     onRevealedEntryIdChange: (String?) -> Unit,
     onItemClick: (DiaryEntry) -> Unit,
     onRename: (DiaryEntry) -> Unit,
-    onDelete: (DiaryEntry) -> Unit
+    onDelete: (DiaryEntry) -> Unit,
+    isInSearching: Boolean = false,
+    searchQuery: String = ""
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -464,35 +471,87 @@ private fun FileListContent(
         overscrollEffect = null,
         state = lazyListState
     ) {
-        items(
-            items = displayEntries,
-            key = { it.file.uri },
-            contentType = { "diary_entry" } // for better recycling
-        ) { entry ->
-            val isRevealed = revealedEntryId == entry.file.uri.toString()
+        if (displayEntries.isEmpty()) {
+            item {
+                // Only show content when NOT in search mode OR when search has no results
+                if (!isInSearching) {
+                    // Normal mode - no files exist
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "Welcome to EchoSpace!",
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                } else if (searchQuery.isNotEmpty()) {
+                    // Search mode with query but no results
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.SearchOff,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(64.dp)
+                                .alpha(0.3f),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
 
-            SwipeableDiaryListItem(
-                entry = entry,
-                onItemClick = {
-                    onRevealedEntryIdChange(null)
-                    onItemClick(entry)
-                },
-                onRename = {
-                    onRename(entry)
-                },
-                onDelete = {
-                    onDelete(entry)
-                },
-                isRevealed = isRevealed,
-                onRevealChange = { shouldReveal ->
-                    onRevealedEntryIdChange(
-                        if (shouldReveal) entry.file.uri.toString() else null
-                    )
-                },
-                isSwipeEnabled = !isRefreshing // Disable swipe when refreshing
-            )
+                        Spacer(modifier = Modifier.height(16.dp))
 
-            //HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                        Text(
+                            text = "No items match your search",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.alpha(0.6f), // Reduced alpha
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+        } else {
+            // Your existing items display code remains the same
+            items(
+                items = displayEntries,
+                key = { it.file.uri },
+                contentType = { "diary_entry" }
+            ) { entry ->
+                val isRevealed = revealedEntryId == entry.file.uri.toString()
+
+                SwipeableDiaryListItem(
+                    entry = entry,
+                    onItemClick = {
+                        onRevealedEntryIdChange(null)
+                        onItemClick(entry)
+                    },
+                    onRename = {
+                        onRename(entry)
+                    },
+                    onDelete = {
+                        onDelete(entry)
+                    },
+                    isRevealed = isRevealed,
+                    onRevealChange = { shouldReveal ->
+                        onRevealedEntryIdChange(
+                            if (shouldReveal) entry.file.uri.toString() else null
+                        )
+                    },
+                    isSwipeEnabled = !isRefreshing
+                )
+            }
         }
     }
 }

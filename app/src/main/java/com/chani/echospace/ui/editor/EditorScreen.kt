@@ -1,6 +1,9 @@
 package com.chani.echospace.ui.editor
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -38,6 +42,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -55,6 +61,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.documentfile.provider.DocumentFile
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.chani.echospace.ui.components.CustomScrollbar
@@ -93,6 +100,9 @@ fun EditorScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    // ✅ NEW: FAB visibility state based on scroll direction
+    var isFabVisible by remember { mutableStateOf(true) }
+
     // Initialize edit mode only once - UPDATED with guard
     val initialized = rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -101,6 +111,38 @@ fun EditorScreen(
             initialized.value = true
         }
     }
+
+    // ✅ NEW: Track scroll direction for FAB animation
+    LaunchedEffect(isEditMode, editScrollState, readScrollState) {
+        // Get the appropriate scroll state based on current mode
+        val currentScrollState = if (isEditMode) editScrollState else readScrollState
+        var lastScrollValue = currentScrollState.value
+
+        snapshotFlow { currentScrollState.value }
+            .collect { scrollValue ->
+                val scrollDelta = scrollValue - lastScrollValue
+
+                // Show FAB when scrolling up or at the top
+                // Hide FAB when scrolling down (with some threshold for sensitivity)
+                when {
+                    scrollValue == 0 -> isFabVisible = true // Always show at top
+                    scrollDelta < -8 -> isFabVisible = true // Scrolling up (threshold: 8px)
+                    scrollDelta > 12 -> isFabVisible = false // Scrolling down (threshold: 12px)
+                }
+
+                lastScrollValue = scrollValue
+            }
+    }
+
+    // ✅ NEW: Animated FAB offset for smooth slide in/out
+    val fabOffsetY by animateDpAsState(
+        targetValue = if (isFabVisible) 0.dp else 100.dp, // Slide down 100dp when hidden
+        animationSpec = tween(
+            durationMillis = 200,
+            easing = FastOutSlowInEasing
+        ),
+        label = "FABSlideAnimation"
+    )
 
     // Load content using ViewModel method instead of direct calls
     LaunchedEffect(initialContent) {
@@ -214,6 +256,10 @@ fun EditorScreen(
                         viewModel.setEditMode(true)
                     }
                 },
+                modifier = Modifier
+                    .offset {
+                        IntOffset(0, fabOffsetY.roundToPx()) // ✅ Lambda version
+                    },
                 containerColor = when (saveStatus) {
                     is SaveStatus.Error -> MaterialTheme.colorScheme.error
                     else -> MaterialTheme.colorScheme.primary
@@ -285,6 +331,8 @@ fun EditorScreen(
                                         )
                                         scope.launch {
                                             bringIntoViewRequester.bringIntoView(adjustedRect)
+                                            delay(100)
+                                            editScrollState.scrollTo(editScrollState.value)
                                         }
                                     }
                                 },
@@ -359,17 +407,16 @@ fun EditorScreen(
                                 )
                             }
                         }
-
                     }
-
                 }//box ending
-                // CustomScrollbar overlay for both modes
+                // CustomScrollbar overlay for only reading mode
                 CustomScrollbar(
-                    scrollState = if (isEditMode) editScrollState else readScrollState,
+                    //scrollState = if (isEditMode) editScrollState else readScrollState,
+                    scrollState = readScrollState,  // not showing the scrollbar in editing mode (known bug)
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .fillMaxHeight()
-                        .padding(top = 0.dp, end = 2.dp, bottom = 0.dp), // Small padding from screen edge
+                        .padding(top = 16.dp, end = 2.dp, bottom = 16.dp), // Small padding from screen edge
                     thickness = 4.dp, // Minimal thickness like your HomeScreen
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )

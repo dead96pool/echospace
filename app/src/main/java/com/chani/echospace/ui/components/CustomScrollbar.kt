@@ -71,7 +71,7 @@ fun CustomScrollbar(
 
     // Animate visibility (same for both types)
     val alpha by animateFloatAsState(
-        targetValue = if (shouldShow && scrollData.isVisible) 1f else 0.2f,
+        targetValue = if (shouldShow && scrollData.isVisible) 1f else 0f,
         animationSpec = tween(
             durationMillis = if (shouldShow) 150 else 300,
             easing = androidx.compose.animation.core.FastOutSlowInEasing

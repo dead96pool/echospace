@@ -356,7 +356,7 @@ fun HomeScreen(
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
                                 .fillMaxHeight()
-                                .padding(top = 0.dp, end = 2.dp, bottom = 0.dp),
+                                .padding(top = 0.dp, end = 2.dp, bottom = 8.dp),
                             thickness = 4.dp,
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )

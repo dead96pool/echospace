@@ -1,6 +1,7 @@
 package com.chani.echospace.ui.home
 
 import android.content.Intent
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -256,13 +257,14 @@ fun HomeScreen(
                     }
                 } else {
                     // Show search results or normal file list
-                    val displayEntries = if (isSearching) {
-                        // Convert search results back to DiaryEntry objects
-                        searchResults.mapNotNull { searchResult ->
+                    val (displayEntries, snippetMap) = if (isSearching) {
+                        val searchResultEntries = searchResults.mapNotNull { searchResult ->
                             entries.find { it.file.uri.toString() == searchResult.uri }
                         }
+                        val snippetMap = searchResults.associate { it.uri to it.snippet }
+                        searchResultEntries to snippetMap
                     } else {
-                        entries
+                        entries to emptyMap()
                     }
 
                     // Create Box to contain both PullToRefreshBox and CustomScrollbar
@@ -319,7 +321,8 @@ fun HomeScreen(
                                         revealedEntryId = null
                                     },
                                     isInSearching = false,
-                                    searchQuery = searchQuery
+                                    searchQuery = searchQuery,
+                                    snippetMap = snippetMap
                                 )
                             }
                         } else {
@@ -346,7 +349,8 @@ fun HomeScreen(
                                     revealedEntryId = null
                                 },
                                 isInSearching = true,
-                                searchQuery = searchQuery
+                                searchQuery = searchQuery,
+                                snippetMap = snippetMap
                             )
                         }
 
@@ -462,7 +466,9 @@ private fun FileListContent(
     onRename: (DiaryEntry) -> Unit,
     onDelete: (DiaryEntry) -> Unit,
     isInSearching: Boolean = false,
-    searchQuery: String = ""
+    searchQuery: String = "",
+    //searchResults: List<SearchResultItem> = emptyList(),
+    snippetMap: Map<String, String> = emptyMap(),
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -531,6 +537,11 @@ private fun FileListContent(
             ) { entry ->
                 val isRevealed = revealedEntryId == entry.file.uri.toString()
 
+                // Get snippet from the snippet map
+                val snippet = snippetMap[entry.file.uri.toString()]
+
+                Log.d("HomeScreen", "snippet in search: $snippet")
+
                 SwipeableDiaryListItem(
                     entry = entry,
                     onItemClick = {
@@ -549,7 +560,9 @@ private fun FileListContent(
                             if (shouldReveal) entry.file.uri.toString() else null
                         )
                     },
-                    isSwipeEnabled = !isRefreshing
+                    isSwipeEnabled = !isRefreshing,
+                    snippet = snippet,
+                    isInSearchMode = isInSearching
                 )
             }
         }

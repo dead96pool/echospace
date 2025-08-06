@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,7 +28,9 @@ import com.chani.echospace.domain.model.DiaryEntry
 fun DiaryListItem(
     entry: DiaryEntry,
     onClick: () -> Unit,
-    onLongClick: (() -> Unit)? = null
+    onLongClick: (() -> Unit)? = null,
+    snippet: String? = null,
+    isInSearchMode: Boolean = false
 ) {
     // Pre-calculate and cache metadata during composition
     val metadataText = remember(entry.wordCount, entry.lastModifiedDisplay) {
@@ -69,16 +72,44 @@ fun DiaryListItem(
                 overflow = TextOverflow.Ellipsis // Handle long file names gracefully
             )
 
-            //val metadataText = buildMetadataText(entry)
-            if (metadataText.isNotEmpty()) {
-                Text(
-                    text = metadataText,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 12.sp  // Smaller font as requested
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),  // Less prominent
-                    modifier = Modifier.padding(top = 2.dp)
-                )
+            // Enhanced snippet display with highlighting
+            if (isInSearchMode) {
+                if (snippet == "Found in filename") {
+                    // Filename match: Show metadata
+                    if (metadataText.isNotEmpty()) {
+                        Text(
+                            text = metadataText,
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
+                } else if (!snippet.isNullOrBlank()) {
+                    // Fallback: Display plain snippet
+                    Text(
+                        text = "\"$snippet\"",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 12.sp,
+                            fontStyle = FontStyle.Italic
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            } else {
+                // Normal mode: Always show metadata
+                if (metadataText.isNotEmpty()) {
+                    Text(
+                        text = metadataText,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 12.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
             }
         }
     }

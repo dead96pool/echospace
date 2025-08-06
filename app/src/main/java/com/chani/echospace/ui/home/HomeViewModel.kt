@@ -29,6 +29,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import javax.inject.Inject
+import java.util.Locale
 
 sealed class RefreshResult {
     data class Success(val totalFiles: Int, val newFiles: Int) : RefreshResult()
@@ -186,13 +187,14 @@ class HomeViewModel @Inject constructor(
                             }
 
                             if (content.lowercase().contains(lowerQuery)) {
-                                // Extract snippet around the match
-                                val snippet = extractSnippet(content, lowerQuery)
+                                // Extract plain snippets
+                                val plainSnippet = extractSnippet(content, lowerQuery)
+
                                 results.add(
                                     SearchResultItem(
                                         uri = entry.file.uri.toString(),
                                         title = entry.name,
-                                        snippet = snippet,
+                                        snippet = plainSnippet, // Keep existing for compatibility
                                         score = 0.8f
                                     )
                                 )
@@ -215,14 +217,29 @@ class HomeViewModel @Inject constructor(
 
     // Helper function to extract snippet around search match
     private fun extractSnippet(content: String, query: String): String {
-        val index = content.lowercase().indexOf(query.lowercase())
-        return if (index >= 0) {
-            val start = maxOf(0, index - 50)
-            val end = minOf(content.length, index + query.length + 50)
-            content.substring(start, end).trim()
-        } else {
-            content.take(100)
+        val words = content.split(Regex("\\s+"))
+        val wordsLower = words.map { it.lowercase(Locale.getDefault()) }
+        val lowerQuery = query.lowercase(Locale.getDefault())
+
+        // Find first word that contains the query
+        val matchIndex = wordsLower.indexOfFirst { word -> word.contains(lowerQuery) }
+
+        if (matchIndex == -1) {
+            return content.take(100) + if (content.length > 100) "..." else ""
         }
+
+        val contextBefore = 3
+        val contextAfter = 4
+        val startIndex = maxOf(0, matchIndex - contextBefore)
+        val endIndex = minOf(words.size - 1, matchIndex + contextAfter)
+
+        val snippetWords = words.subList(startIndex, endIndex + 1)
+        val snippet = snippetWords.joinToString(" ")
+
+        val prefix = if (startIndex > 0) "..." else ""
+        val suffix = if (endIndex < words.size - 1) "..." else ""
+
+        return "$prefix$snippet$suffix"
     }
 
     // updated for folder access management

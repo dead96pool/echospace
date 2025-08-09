@@ -33,7 +33,7 @@ fun SortBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         modifier = modifier,
-        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
         dragHandle = {
             Box(
                 modifier = Modifier

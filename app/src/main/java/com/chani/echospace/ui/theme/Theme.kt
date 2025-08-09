@@ -18,8 +18,8 @@ private val LightColorScheme = lightColorScheme(
     // Primary colors - used for main UI elements like FAB, buttons
     primary = DarkGrey,
     onPrimary = TextWhite,
-    primaryContainer = MediumGrey,
-    onPrimaryContainer = TextWhite,
+    primaryContainer = LightWhite,
+    onPrimaryContainer = TextBlack,
 
     // Secondary colors - used for secondary UI elements
     secondary = MediumGrey,
@@ -55,8 +55,8 @@ private val DarkColorScheme = darkColorScheme(
     // Primary colors - used for main UI elements like FAB, buttons
     primary = AlmostWhite,
     onPrimary = TextBlack,
-    primaryContainer = LightWhite,
-    onPrimaryContainer = TextBlack,
+    primaryContainer = MediumGrey,
+    onPrimaryContainer = TextWhite,
 
     // Secondary colors - used for secondary UI elements
     secondary = LightWhite,

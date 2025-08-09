@@ -1,16 +1,12 @@
 basic functionality:
+- recycle bin
 - virtual File organization/folders using hashtags
 - auto add hashtags in file content
-- Export/import features
-- Backup/sync capabilities
 - maybe change the formatstyle for the file hashtag in view mode
-- possibly show the app folder path in settings page
 
-
+- user controlled new folder selection
 - sorting should work for virtual folders as well
 - hilt making the changes not being saved to the file
-- fix rotation causing the create new file dialog close, exising out of editing mode and removing the files from the homescreen
-- topbar dropdown or settings screen for theme/sorting options
 - highlight text for format editing maybe
 - hardware support for keyboard
 - double and single quote support
@@ -30,8 +26,7 @@ future features:
 - sort button to function more like toggle
 - app main icon something like a typewriter
 - undo and redo working
-- cloud sync
-- db to store the notes
+- cloud sync/backup
 - possible summary of the notes to include in the filelist screen
 - better colour selection for heading like a colourwheel (colour user selection)
 - more selection for typeface fonts (font user selection)
@@ -41,14 +36,21 @@ future features:
 - being able to set custom folder colours
 - implement various tags along with folder structure
 - save version for files basically saving the changes history
-- recyle bin
 - archive notes
 - Are error messages localized or do you plan to add internationalization?
+- add a slimtopbar in editing screen (include title)
+- to save add a tick which is not hidden keyboard
+- editing screen textbox not to the bottom when file half filled. like highliting a text in view only mode doesnt exit the highlighting
+- sharing the export, use the term "Share"
+- give option to select what files to export and export as what (pdf, image, doc, etc)
+- make create FAB to have multipurpose to create folder or text file
+- title inside file and filename disconnected
+- sql injection
 
 
 potentially current future ideas:
 - Provide real-time syntax highlighting in the editor view
-- Add a simple toolbar with buttons to easily insert markdown syntax (e.g., apply bold, create a heading, insert a bullet point)
+- Add a simple popup toolbar with buttons to easily insert markdown syntax (e.g., apply bold, create a heading, insert a bullet point)
 - Expand your parser to support checklists [ ] / [x]
 - When a user types #, suggest existing tags/folder paths.
 
@@ -75,3 +77,4 @@ Indigo Purple	#6C63FF	Creative and elegant, works on both themes
 Rose Pink	#E65C9C	Friendly and expressive without clashing
 Slate Gray	#708090	Muted and professional, low contrast option
 Lavender Blue	#8DA9C4	Cool and soft, pairs well with dark/bright UIs
+

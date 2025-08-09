@@ -12,6 +12,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import android.util.Log
 import javax.inject.Inject
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+import java.time.Instant
+import java.time.format.DateTimeFormatter
 
 class FileAlreadyExistsException(message: String) : Exception(message)
 class FolderAccessLostException(message: String) : Exception(message)
@@ -212,4 +216,157 @@ class FileManager @Inject constructor(
         }
     }
 
+    /**
+     * Creates or gets the exports subfolder within the user's selected folder
+     */
+    private suspend fun getOrCreateExportsFolder(): DocumentFile? {
+        return withContext(Dispatchers.IO) {
+            val folderUri = getFolderUri() ?: return@withContext null
+            val parentFolder = DocumentFile.fromTreeUri(context, folderUri) ?: return@withContext null
+
+            // Check if exports folder already exists
+            val existingExports = parentFolder.findFile("exports")
+            if (existingExports?.isDirectory == true) {
+                return@withContext existingExports
+            }
+
+            // Create exports folder if it doesn't exist
+            parentFolder.createDirectory("exports")
+        }
+    }
+
+    /**
+     * Gets all .txt files from the user folder (excluding exports subfolder)
+     */
+    private suspend fun getTxtFilesForExport(): List<DocumentFile> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val allFiles = getFiles() // Uses existing getFiles method
+                // Filter out any files from the exports subfolder to avoid nested zips
+                allFiles.filter { file ->
+                    val parentName = file.parentFile?.name
+                    parentName != "exports" // Exclude exports folder
+                }
+            } catch (e: Exception) {
+                Log.e("FileManager", "Failed to get txt files for export", e)
+                emptyList()
+            }
+        }
+    }
+
+    /**
+     * Exports all .txt files to a zip with UTC timestamp
+     */
+    suspend fun exportFilesToZip(): ExportResult {
+        return withContext(Dispatchers.IO) {
+            try {
+                // Get files to export
+                val txtFiles = getTxtFilesForExport()
+                if (txtFiles.isEmpty()) {
+                    return@withContext ExportResult.NoFiles
+                }
+
+                // Create exports folder
+                val exportsFolder = getOrCreateExportsFolder()
+                    ?: return@withContext ExportResult.Error("Failed to create exports folder")
+
+                // Generate UTC timestamp filename
+                val timestamp = Instant.now().atZone(java.time.ZoneOffset.UTC)
+                    .format(DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'"))
+                val zipFileName = "echospace_$timestamp.zip"
+
+                // Create zip file in exports folder
+                val zipFile = exportsFolder.createFile("application/zip", zipFileName)
+                    ?: return@withContext ExportResult.Error("Failed to create zip file")
+
+                // Write zip content
+                context.contentResolver.openOutputStream(zipFile.uri)?.use { outputStream ->
+                    ZipOutputStream(outputStream).use { zipOut ->
+                        txtFiles.forEach { file ->
+                            try {
+                                val content = readFile(file) // Uses existing readFile method
+                                val fileName = file.name ?: "untitled.txt"
+
+                                val zipEntry = ZipEntry(fileName)
+                                zipOut.putNextEntry(zipEntry)
+                                zipOut.write(content.toByteArray(Charsets.UTF_8))
+                                zipOut.closeEntry()
+                            } catch (e: Exception) {
+                                Log.w("FileManager", "Failed to add file ${file.name} to zip", e)
+                            }
+                        }
+                    }
+                }
+
+                // Get the full path for display
+                val folderPath = extractDisplayPath(getFolderUri().toString())
+                val fullPath = "$folderPath/exports/$zipFileName"
+
+                ExportResult.Success(
+                    fileName = zipFileName,
+                    fullPath = fullPath,
+                    fileCount = txtFiles.size
+                )
+
+            } catch (e: Exception) {
+                Log.e("FileManager", "Export failed", e)
+                ExportResult.Error("Export failed: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Save the timestamp of the last successful export
+     */
+    fun saveLastExportTimestamp(timestamp: Instant) {
+        sharedPrefs.edit {
+            putString("last_export_timestamp", timestamp.toString())
+        }
+    }
+
+    /**
+     * Get the timestamp of the last successful export
+     */
+    fun getLastExportTimestamp(): Instant? {
+        val timestampString = sharedPrefs.getString("last_export_timestamp", null)
+        return timestampString?.let {
+            try {
+                Instant.parse(it)
+            } catch (e: Exception) {
+                Log.w("FileManager", "Failed to parse last export timestamp", e)
+                null
+            }
+        }
+    }
+
+    private fun extractDisplayPath(uriString: String): String {
+        return try {
+            val decoded = java.net.URLDecoder.decode(uriString, "UTF-8")
+            when {
+                decoded.contains("primary:") -> {
+                    val path = decoded.substringAfter("primary:")
+                    path.ifEmpty { "Internal Storage" }
+                }
+                decoded.contains("Documents") -> {
+                    decoded.substringAfter("tree/").substringAfter(":")
+                }
+                else -> "Selected Folder"
+            }
+        } catch (e: Exception) {
+            "Selected Folder"
+        }
+    }
+
+}
+
+// Export result sealed class
+sealed class ExportResult {
+    data class Success(
+        val fileName: String,
+        val fullPath: String,
+        val fileCount: Int
+    ) : ExportResult()
+
+    data class Error(val message: String) : ExportResult()
+    data object NoFiles : ExportResult()
 }

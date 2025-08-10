@@ -1,7 +1,6 @@
 package com.chani.echospace.ui.home
 
 import android.content.Intent
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -266,7 +265,10 @@ fun HomeScreen(
                         val searchResultEntries = searchResults.mapNotNull { searchResult ->
                             entries.find { it.file.uri.toString() == searchResult.uri }
                         }
-                        val snippetMap = searchResults.associate { it.uri to it.snippet }
+                        // wrapped around remember to reduce recomposition
+                        val snippetMap = remember(searchResults) {
+                            searchResults.associate { it.uri to it.snippet }
+                        }
                         searchResultEntries to snippetMap
                     } else {
                         entries to emptyMap()
@@ -541,11 +543,8 @@ private fun FileListContent(
                 contentType = { "diary_entry" }
             ) { entry ->
                 val isRevealed = revealedEntryId == entry.file.uri.toString()
-
                 // Get snippet from the snippet map
                 val snippet = snippetMap[entry.file.uri.toString()]
-
-                Log.d("HomeScreen", "snippet in search: $snippet")
 
                 SwipeableDiaryListItem(
                     entry = entry,

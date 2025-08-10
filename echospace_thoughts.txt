@@ -1,10 +1,12 @@
 basic functionality:
+- homescreen scrolling seems laggy and dropped frame
 - recycle bin
 - virtual File organization/folders using hashtags
 - auto add hashtags in file content
 - maybe change the formatstyle for the file hashtag in view mode
 
-- user controlled new folder selection
+- search optimisation with incremental reads
+- user controlled new folder selection with documentfoldertree
 - sorting should work for virtual folders as well
 - hilt making the changes not being saved to the file
 - highlight text for format editing maybe

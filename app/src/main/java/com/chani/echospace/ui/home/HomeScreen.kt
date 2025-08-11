@@ -29,6 +29,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.chani.echospace.domain.model.DiaryEntry
+import com.chani.echospace.domain.repository.VirtualFolder
+import com.chani.echospace.domain.repository.VirtualListing
 import com.chani.echospace.ui.components.*
 import com.chani.echospace.ui.components.CreateEntryDialog
 import com.chani.echospace.ui.components.CustomScrollbar
@@ -87,10 +89,17 @@ fun HomeScreen(
     val renameError by viewModel.renameError.collectAsState()
     val createError by viewModel.createError.collectAsState()
 
+    // Add virtual folder state collections
+    val virtualListing by viewModel.virtualListing.collectAsState()
+    val isVirtualMode by viewModel.isVirtualMode.collectAsState()
+    val currentFolderName by viewModel.currentFolderName.collectAsState()
+    // for future breadcrumb in the slimtopbar
+    val currentVirtualPath by viewModel.currentVirtualPath.collectAsState()
+
     val editorLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) {
-        viewModel.loadEntries() // Refresh the list when returning from editor
+        viewModel.onEditorReturn()
     }
 
     // Add folder picker launcher for reselection
@@ -137,6 +146,11 @@ fun HomeScreen(
         revealedEntryId = null
     }
 
+    // Handle back navigation for virtual folders
+    BackHandler(enabled = isVirtualMode && currentFolderName != "EchoSpace") {
+        viewModel.navigateUp()
+    }
+
     LaunchedEffect(Unit) {
         viewModel.loadEntries()
     }
@@ -144,7 +158,7 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             SlimTopBar(
-                title = "EchoSpace",
+                title = currentFolderName,
                 isDarkTheme = isDarkTheme,
                 onThemeToggle = themeViewModel::toggleTheme,
                 onSortClick = { showSortBottomSheet = true },
@@ -314,8 +328,11 @@ fun HomeScreen(
                                     onRevealedEntryIdChange = { revealedEntryId = it },
                                     onItemClick = { entry ->
                                         revealedEntryId = null
+                                        viewModel.startEditingFile(entry.file.uri.toString())
                                         val intent = Intent(context, EditorActivity::class.java).apply {
                                             putExtra("file_uri", entry.file.uri.toString())
+                                            putExtra("startineditmode", false)
+                                            putExtra("initialcontent", "")
                                         }
                                         editorLauncher.launch(intent)
                                     },
@@ -329,7 +346,13 @@ fun HomeScreen(
                                     },
                                     isInSearching = false,
                                     searchQuery = "",
-                                    snippetMap = snippetMap
+                                    snippetMap = snippetMap,
+                                    onFolderClick = { folder ->
+                                        viewModel.navigateToFolder(folder)
+                                    },
+                                    isVirtualMode = true,
+                                    virtualListing = virtualListing,
+                                    currentVirtualPath = currentVirtualPath
                                 )
                             }
                         } else {
@@ -357,7 +380,13 @@ fun HomeScreen(
                                 },
                                 isInSearching = true,
                                 searchQuery = searchQuery,
-                                snippetMap = snippetMap
+                                snippetMap = snippetMap,
+                                onFolderClick = { folder ->
+                                    viewModel.navigateToFolder(folder)
+                                },
+                                isVirtualMode = false,
+                                virtualListing = null,
+                                currentVirtualPath = currentVirtualPath
                             )
                         }
 
@@ -476,6 +505,10 @@ private fun FileListContent(
     searchQuery: String = "",
     //searchResults: List<SearchResultItem> = emptyList(),
     snippetMap: Map<String, String> = emptyMap(),
+    onFolderClick: (VirtualFolder) -> Unit = {},
+    isVirtualMode: Boolean,
+    virtualListing: VirtualListing?,
+    currentVirtualPath: List<String> = emptyList()
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -536,40 +569,109 @@ private fun FileListContent(
                 }
             }
         } else {
-            // Your existing items display code remains the same
-            items(
-                items = displayEntries,
-                key = { it.file.uri },
-                contentType = { "diary_entry" }
-            ) { entry ->
-                val isRevealed = revealedEntryId == entry.file.uri.toString()
-                // Get snippet from the snippet map
-                val snippet = snippetMap[entry.file.uri.toString()]
+            // NEW: Show virtual folders and files when in virtual mode
+            if (isVirtualMode && virtualListing != null && !isInSearching) {
+                // Show folders first
+                items(
+                    items = virtualListing.folders,
+                    key = { folder -> "folder_${folder.fullPathKeys.joinToString("/")}" },
+                    contentType = { "virtual_folder" }
+                ) { folder ->
+                    FolderListItem(
+                        folder = folder,
+                        onClick = {
+                            onRevealedEntryIdChange(null)
+                            onFolderClick(folder)
+                            // Navigate to folder using ViewModel method
+                            // This will need to be passed as a parameter to FileListContent
+                        }
+                    )
+                }
 
-                SwipeableDiaryListItem(
-                    entry = entry,
-                    onItemClick = {
-                        onRevealedEntryIdChange(null)
-                        onItemClick(entry)
-                    },
-                    onRename = {
-                        onRename(entry)
-                    },
-                    onDelete = {
-                        onDelete(entry)
-                    },
-                    isRevealed = isRevealed,
-                    onRevealChange = { shouldReveal ->
-                        onRevealedEntryIdChange(
-                            if (shouldReveal) entry.file.uri.toString() else null
-                        )
-                    },
-                    isSwipeEnabled = !isRefreshing,
-                    snippet = snippet,
-                    isInSearchMode = isInSearching,
-                    searchQuery = searchQuery
-                )
+                // Then show files at current virtual location
+                items(
+                    items = virtualListing.files,
+                    key = { it.file.uri },
+                    contentType = { "diary_entry" }
+                ) { entry ->
+                    val isRevealed = revealedEntryId == entry.file.uri.toString()
+                    val snippet = snippetMap[entry.file.uri.toString()]
+
+                    SwipeableDiaryListItem(
+                        entry = entry,
+                        onItemClick = {
+                            onRevealedEntryIdChange(null)
+                            onItemClick(entry)
+                        },
+                        onRename = { onRename(entry) },
+                        onDelete = { onDelete(entry) },
+                        isRevealed = isRevealed,
+                        onRevealChange = { shouldReveal ->
+                            onRevealedEntryIdChange(
+                                if (shouldReveal) entry.file.uri.toString() else null
+                            )
+                        },
+                        isSwipeEnabled = !isRefreshing,
+                        snippet = snippet,
+                        isInSearchMode = false,
+                        searchQuery = "",
+                        isFolder = false
+                    )
+                }
+            } else {
+                // Your current items implementation for flat/search mode
+                items(
+                    items = displayEntries,
+                    key = { it.file.uri },
+                    contentType = { "diary_entry" }
+                ) { entry ->
+                    val isRevealed = revealedEntryId == entry.file.uri.toString()
+                    val snippet = snippetMap[entry.file.uri.toString()]
+
+                    SwipeableDiaryListItem(
+                        // Keep all your existing parameters exactly as they are
+                        entry = entry,
+                        onItemClick = {
+                            onRevealedEntryIdChange(null)
+                            onItemClick(entry)
+                        },
+                        onRename = { onRename(entry) },
+                        onDelete = { onDelete(entry) },
+                        isRevealed = isRevealed,
+                        onRevealChange = { shouldReveal ->
+                            onRevealedEntryIdChange(
+                                if (shouldReveal) entry.file.uri.toString() else null
+                            )
+                        },
+                        isSwipeEnabled = !isRefreshing,
+                        snippet = snippet,
+                        isInSearchMode = isInSearching,
+                        searchQuery = searchQuery,
+                        isFolder = false // Add this parameter
+                    )
+                }
             }
         }
     }
+}
+
+@Composable
+fun FolderListItem(
+    folder: VirtualFolder,
+    onClick: () -> Unit
+) {
+    SwipeableDiaryListItem(
+        entry = null, // Pass null for folder items
+        onItemClick = onClick,
+        onRename = { /* No-op for folders */ },
+        onDelete = { /* No-op for folders */ },
+        isRevealed = false,
+        onRevealChange = { /* No-op for folders */ },
+        isSwipeEnabled = false, // Disable swipe for folders
+        snippet = null,
+        isInSearchMode = false,
+        searchQuery = "",
+        isFolder = true, // NEW: Add this parameter to distinguish folders
+        folderData = folder // NEW: Pass folder data
+    )
 }

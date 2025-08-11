@@ -2,10 +2,11 @@ package com.chani.echospace.data.local
 
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.concurrent.TimeUnit
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
+
+data class VirtualSegment(val key: String, val display: String)
+typealias VirtualPath = List<VirtualSegment>
 
 object MetadataUtils {
 
@@ -99,5 +100,94 @@ object MetadataUtils {
             }
         }
     }
+
+    // only check last line
+    fun buildVirtualPathsFromContent(content: String): List<VirtualPath> {
+        val lastLine = getLastNonEmptyLine(content) ?: return emptyList()
+        if (!lastLine.startsWith("#")) return emptyList()
+        return parseVirtualFolderRuns(lastLine)
+    }
+
+    // Returns the last non-empty line, trimmed of trailing newline characters but NOT inner spaces.
+    private fun getLastNonEmptyLine(content: String): String? {
+        if (content.isEmpty()) return null
+        var i = content.length - 1
+
+        // Skip trailing newlines
+        while (i >= 0 && (content[i] == '\n' || content[i] == '\r')) i--
+        if (i < 0) return null
+
+        // Find this line bounds
+        val end = i
+        var start = i
+        while (start >= 0 && content[start] != '\n' && content[start] != '\r') start--
+        val line = content.substring(start + 1, end + 1)
+        val trimmed = line.trim()
+
+        if (trimmed.isNotEmpty()) return trimmed
+
+        // If blank, recurse on previous portion
+        val prev = content.substring(0, (start).coerceAtLeast(0))
+        return getLastNonEmptyLine(prev)
+    }
+
+    // Parse multiple tag runs on the same line.
+    // Example: "#a#b   #c" -> [ ["a","b"], ["c"] ]
+    private fun parseVirtualFolderRuns(line: String): List<VirtualPath> {
+        val result = mutableListOf<VirtualPath>()
+        var idx = 0
+        val len = line.length
+
+        fun isWhitespace(c: Char) = c == ' ' || c == '\t'
+
+        while (idx < len) {
+            // Skip whitespace between runs
+            while (idx < len && isWhitespace(line[idx])) idx++
+            if (idx >= len) break
+
+            if (line[idx] != '#') {
+                // Ignore non-# tokens between runs
+                while (idx < len && !isWhitespace(line[idx]) && line[idx] != '#') idx++
+                continue
+            }
+
+            // Start of a run (a path)
+            val segments = mutableListOf<VirtualSegment>()
+
+            while (idx < len && line[idx] == '#') {
+                // Count consecutive '#'
+                var hashStart = idx
+                while (idx < len && line[idx] == '#') idx++
+                val hashCount = idx - hashStart
+
+                val literalPrefixCount = hashCount - 1
+                val literalPrefix = if (literalPrefixCount > 0) "#".repeat(literalPrefixCount) else ""
+
+                // Collect segment body until next '#' or whitespace
+                val segStart = idx
+                while (idx < len && line[idx] != '#' && !isWhitespace(line[idx])) idx++
+                val body = line.substring(segStart, idx)
+
+                if (body.isNotEmpty()) {
+                    val raw = literalPrefix + body
+                    val key = raw.lowercase(Locale.getDefault())
+                    segments.add(VirtualSegment(key = key, display = raw))
+                }
+
+                // If next is whitespace, this run ends
+                if (idx < len && isWhitespace(line[idx])) break
+            }
+
+            if (segments.isNotEmpty()) {
+                result.add(segments)
+            }
+        }
+
+        return result
+    }
+
+    // Utility to pretty-print a virtual path for UI or debugging: "folder/sub/leaf" using display names.
+    fun virtualPathDisplay(path: VirtualPath): String =
+        path.joinToString(separator = "/") { it.display }
 
 }

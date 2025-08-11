@@ -10,10 +10,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chani.echospace.data.local.FileAlreadyExistsException
 import com.chani.echospace.data.local.FolderAccessLostException
+import com.chani.echospace.data.local.MetadataUtils
 import com.chani.echospace.data.preferences.ThemePreferences
 import com.chani.echospace.domain.model.DiaryEntry
 import com.chani.echospace.domain.model.SortOption
 import com.chani.echospace.domain.repository.DiaryRepository
+import com.chani.echospace.domain.repository.VirtualListing
+import com.chani.echospace.domain.repository.VirtualFolder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -90,6 +93,45 @@ class HomeViewModel @Inject constructor(
     // LRU Cache for file contents (cache last 20 files)
     private val contentCache = LruCache<String, String>(20)
 
+    // Virtual folder navigation state
+    private val _currentVirtualPath = MutableStateFlow<List<String>>(emptyList())
+    val currentVirtualPath: StateFlow<List<String>> = _currentVirtualPath.asStateFlow()
+
+    private val _virtualListing = MutableStateFlow<VirtualListing?>(null)
+    val virtualListing: StateFlow<VirtualListing?> = _virtualListing.asStateFlow()
+
+    // Track if we're using virtual folder mode or flat view
+    private val _isVirtualMode = MutableStateFlow(true)
+    val isVirtualMode: StateFlow<Boolean> = _isVirtualMode.asStateFlow()
+
+    // Current folder display name for SlimTopBar
+    private val _currentFolderName = MutableStateFlow("EchoSpace")
+    val currentFolderName: StateFlow<String> = _currentFolderName.asStateFlow()
+
+    // Editor state management - tracks which file is being edited
+    private val _currentlyEditingFile = MutableStateFlow<String?>(null)
+    val currentlyEditingFile: StateFlow<String?> = _currentlyEditingFile.asStateFlow()
+
+    // Track when editor returns
+    private val _editorReturned = MutableStateFlow<String?>(null)
+
+    // Call when opening editor
+    fun startEditingFile(fileUri: String) {
+        _currentlyEditingFile.value = fileUri
+    }
+
+    // Call when editor returns
+    fun onEditorReturn() {
+        val editedFileUri = _currentlyEditingFile.value
+        if (editedFileUri != null) {
+            handleEditorReturn(editedFileUri)
+            _currentlyEditingFile.value = null
+        } else {
+            // Fallback: just refresh
+            loadEntries()
+        }
+    }
+
 
     val sortOption: StateFlow<SortOption> = themePreferences.sortOption
         .stateIn(
@@ -139,6 +181,12 @@ class HomeViewModel @Inject constructor(
             _searchResults.value = emptyList()
             _searchQuery.value = ""
             _isSearchLoading.value = false
+            // Return to virtual folder mode when search is cleared
+            _isVirtualMode.value = true
+            loadEntries()
+        } else {
+            // Switch to flat mode for global search
+            _isVirtualMode.value = false
         }
     }
 
@@ -293,16 +341,99 @@ class HomeViewModel @Inject constructor(
                 _isLoadingEntries.value = _entries.value.isEmpty() // Start loading only when _entries empty
                 _uiState.value = HomeUiState.Normal // Reset to normal state
                 val currentSort = sortOption ?: this@HomeViewModel.sortOption.value
-                _entries.value = diaryRepository.getEntries(currentSort)
+                if (_isVirtualMode.value) {
+                    // Load virtual listing (folders + files for current path)
+                    val listing = diaryRepository.getVirtualListing(_currentVirtualPath.value, currentSort)
+                    _virtualListing.value = listing
+                    // Keep flat entries for search compatibility
+                    _entries.value = diaryRepository.getEntries(currentSort)
+                } else {
+                    // Load flat entries (for search mode)
+                    _entries.value = diaryRepository.getEntries(currentSort)
+                    // Clear virtual listing when in flat mode
+                    _virtualListing.value = null
+                }
             } catch (e: FolderAccessLostException) {
                 // Handle folder access loss
                 _uiState.value = HomeUiState.FolderAccessLost
                 _entries.value = emptyList()
+                _virtualListing.value = null
             } catch (e: Exception) {
                 // Handle any other errors (preserves existing behavior)
                 _entries.value = emptyList()
+                _virtualListing.value = null
             } finally {
                 _isLoadingEntries.value = false // Stop loading
+            }
+        }
+    }
+
+    // Navigate into a virtual folder
+    fun navigateToFolder(folder: VirtualFolder) {
+        _currentVirtualPath.value = folder.fullPathKeys
+        _currentFolderName.value = folder.nameDisplay
+        loadEntries()
+    }
+
+    // Navigate up one level (for Back button)
+    fun navigateUp(): Boolean {
+        val currentPath = _currentVirtualPath.value
+        if (currentPath.isEmpty()) {
+            // Already at root - let system handle back (exit app)
+            return false
+        }
+
+        val parentPath = currentPath.dropLast(1)
+        _currentVirtualPath.value = parentPath
+
+        // Update folder name
+        _currentFolderName.value = if (parentPath.isEmpty()) {
+            "EchoSpace"
+        } else {
+            // Use the last segment as display name
+            parentPath.lastOrNull() ?: "EchoSpace"
+        }
+
+        loadEntries()
+        return true
+    }
+
+    // Navigate to root
+    fun navigateToRoot() {
+        _currentVirtualPath.value = emptyList()
+        _currentFolderName.value = "EchoSpace"
+        loadEntries()
+    }
+
+    // Handle returning from Editor (when hashtags might have changed)
+    fun handleEditorReturn(fileUri: String) {
+        viewModelScope.launch {
+            try {
+                // Find the file that was edited
+                val allEntries = diaryRepository.getEntries(sortOption.value)
+                val editedEntry = allEntries.find { it.file.uri.toString() == fileUri }
+
+                if (editedEntry != null) {
+                    // Read the file content to check for new virtual paths
+                    val content = diaryRepository.readContent(editedEntry.file)
+                    val virtualPaths = MetadataUtils.buildVirtualPathsFromContent(content)
+
+                    if (virtualPaths.isNotEmpty()) {
+                        // Navigate to the first virtual path of the file
+                        val firstPath = virtualPaths.first()
+                        val pathKeys = firstPath.map { it.key }
+                        _currentVirtualPath.value = pathKeys
+                        _currentFolderName.value = firstPath.lastOrNull()?.display ?: "EchoSpace"
+                    }
+                }
+
+                // Reload entries to reflect changes
+                loadEntries()
+
+            } catch (e: Exception) {
+                Log.e("HomeViewModel", "Error handling editor return", e)
+                // Fallback: just reload current view
+                loadEntries()
             }
         }
     }

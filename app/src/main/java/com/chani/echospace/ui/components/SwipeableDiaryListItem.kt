@@ -9,22 +9,25 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.chani.echospace.domain.model.DiaryEntry
+import com.chani.echospace.domain.repository.VirtualFolder
 import com.chani.echospace.ui.icons.CustomIcons
 import kotlin.math.roundToInt
 
 @Composable
 fun SwipeableDiaryListItem(
-    entry: DiaryEntry,
+    entry: DiaryEntry?,
     onItemClick: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
@@ -33,7 +36,9 @@ fun SwipeableDiaryListItem(
     isSwipeEnabled: Boolean = true,
     snippet: String? = null,
     isInSearchMode: Boolean = false,
-    searchQuery: String = ""
+    searchQuery: String = "",
+    isFolder: Boolean = false,
+    folderData: VirtualFolder? = null
 ) {
     val density = LocalDensity.current
     val actionButtonWidth = with(density) { 59.5.dp.toPx() }
@@ -87,7 +92,7 @@ fun SwipeableDiaryListItem(
                 .offset { IntOffset(animatedOffsetX.roundToInt(), 0) }
                 .zIndex(1f)
                 .let { modifier ->
-                    if (isSwipeEnabled) {
+                    if (isSwipeEnabled && !isFolder) {
                         modifier.pointerInput(Unit) {
                             detectHorizontalDragGestures(
                                 onDragStart = {
@@ -111,18 +116,26 @@ fun SwipeableDiaryListItem(
             color = MaterialTheme.colorScheme.background,
             shape = RoundedCornerShape(4.dp)
         ) {
-            DiaryListItem(
-                entry = entry,
-                onClick = onItemClick,
-                onLongClick = {
-                    if (offsetX < totalWidth * 0.5f) {
-                        onRevealChange(true)
-                    }
-                },
-                snippet = snippet,
-                isInSearchMode = isInSearchMode,
-                searchQuery = searchQuery
-            )
+            if (isFolder && folderData != null) {
+                // NEW: Display folder item
+                FolderDisplayItem(
+                    folder = folderData,
+                    onClick = onItemClick
+                )
+            } else if (entry != null) {
+                DiaryListItem(
+                    entry = entry,
+                    onClick = onItemClick,
+                    onLongClick = {
+                        if (offsetX < totalWidth * 0.5f) {
+                            onRevealChange(true)
+                        }
+                    },
+                    snippet = snippet,
+                    isInSearchMode = isInSearchMode,
+                    searchQuery = searchQuery
+                )
+            }
         }
     }
 }
@@ -186,5 +199,54 @@ private fun ActionButton(
                 Modifier.size(21.dp)
             }
         )
+    }
+}
+
+@Composable
+private fun FolderDisplayItem(
+    folder: VirtualFolder,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 8.dp, horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Folder,
+            contentDescription = "Folder Icon",
+            modifier = Modifier.size(40.dp),
+            tint = MaterialTheme.colorScheme.secondary
+        )
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(
+                text = folder.nameDisplay,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+//            Text(
+//                text = MetadataUtils.formatLastModified(folder.mostRecentMillis),
+//                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
+//                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+//                modifier = Modifier.padding(top = 2.dp)
+//            )
+        }
+
+//        Icon(
+//            imageVector = Icons.Default.ChevronRight,
+//            contentDescription = "Open folder",
+//            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+//            modifier = Modifier.size(20.dp)
+//        )
     }
 }

@@ -12,10 +12,13 @@ import com.chani.echospace.data.local.MetadataUtils
 import com.chani.echospace.domain.model.DiaryEntry
 import com.chani.echospace.domain.model.SortOption
 import com.chani.echospace.domain.repository.DiaryRepository
+import com.chani.echospace.domain.repository.VirtualFolder
+import com.chani.echospace.domain.repository.VirtualListing
 import kotlinx.coroutines.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import android.util.Log
+import java.util.Locale
 import com.chani.echospace.data.local.FolderAccessLostException
 import javax.inject.Inject
 
@@ -24,6 +27,27 @@ class DiaryRepositoryImpl @Inject constructor(
     private val fileManager: FileManager,
     private val metadataDao: DiaryMetadataDao
 ) : DiaryRepository {
+
+    // ---- Virtual index cache (in-memory) ----
+    private var virtualIndexBuiltAt: Long = 0L
+
+    // Map of normalized path key chain joined by "/" → aggregated mostRecent timestamp (subtree)
+    private val folderMostRecent: MutableMap<String, Long> = mutableMapOf()
+
+    // Map of normalized path key chain joined by "/" → list of files belonging exactly at that node
+    private val pathFiles: MutableMap<String, MutableList<DiaryEntry>> = mutableMapOf()
+
+    // Map of normalized path key chain joined by "/" → map of child folderKey → displayName (for leaf names)
+    private val pathChildFolders: MutableMap<String, MutableMap<String, String>> = mutableMapOf()
+
+    private fun joinKeys(keys: List<String>): String = keys.joinToString("/")
+
+    private fun clearVirtualIndex() {
+        folderMostRecent.clear()
+        pathFiles.clear()
+        pathChildFolders.clear()
+        virtualIndexBuiltAt = 0L
+    }
 
     override suspend fun saveFolderUri(uri: Uri) {
         fileManager.saveFolderUri(uri)
@@ -143,6 +167,9 @@ class DiaryRepositoryImpl @Inject constructor(
             }
         }
 
+        // NEW: invalidate virtual index after deletion
+        clearVirtualIndex()
+
         return result
     }
 
@@ -172,6 +199,10 @@ class DiaryRepositoryImpl @Inject constructor(
                         )
                     )
                 }
+
+                // NEW: invalidate virtual index after rename
+                clearVirtualIndex()
+
             } catch (e: Exception) {
                 Log.w("DiaryRepository", "Failed to update metadata after rename", e)
                 // Continue normally - rename was successful
@@ -202,6 +233,9 @@ class DiaryRepositoryImpl @Inject constructor(
                     fileName = file.name ?: "Untitled"
                 )
                 metadataDao.insertMetadata(metadata)
+                // NEW: invalidate virtual index after save
+                clearVirtualIndex()
+
             } catch (e: Exception) {
                 Log.w("DiaryRepository", "Failed to update metadata after save", e)
                 // Continue normally - save was successful even if metadata update failed
@@ -248,9 +282,142 @@ class DiaryRepositoryImpl @Inject constructor(
                     metadataDao.deleteMetadata(orphanedUri)
                 }
 
+                // NEW: rebuild or invalidate virtual index so folder timestamps reflect changes
+                clearVirtualIndex()
+
             } catch (e: Exception) {
                 Log.e("DiaryRepository", "Failed to refresh metadata", e)
             }
         }
     }
+
+    private suspend fun buildVirtualIndex(sortOption: SortOption) {
+        // If already built recently in this process and caches exist, we can skip.
+        // For simplicity, rebuild on every call from callers that need fresh structure.
+        clearVirtualIndex()
+
+        // Get flat entries via existing logic to reuse metadata and avoid duplicate IO
+        val flatEntries = getEntries(sortOption)
+
+        for (entry in flatEntries) {
+            val file = entry.file
+            val content = try {
+                fileManager.readFile(file)
+            } catch (e: Exception) {
+                // If content read fails, skip virtual tagging for this file
+                continue
+            }
+
+            val paths = MetadataUtils.buildVirtualPathsFromContent(content)
+            if (paths.isEmpty()) {
+                // No tags: file belongs to virtual root (empty path)
+                val key = "" // root node
+                pathFiles.getOrPut(key) { mutableListOf() }.add(entry)
+                // Update folderMostRecent for root with this file’s lastModified
+                val lm = file.lastModified()
+                val current = folderMostRecent[key]
+                if (current == null || lm > current) folderMostRecent[key] = lm
+                continue
+            }
+
+            // For each virtual path (can be multiple tag runs)
+            for (path in paths) {
+                // normalized keys chain from root to leaf
+                val keys = path.map { it.key } // lowercased already by parser
+                val leafKey = joinKeys(keys)
+                // Attach file to leaf bucket
+                pathFiles.getOrPut(leafKey) { mutableListOf() }.add(entry)
+
+                // Register child folders along the chain for navigation + display names
+                // Also compute subtree most-recent timestamps by propagating from leaf up to root
+                val lastModified = file.lastModified()
+
+                // For each node from root → leaf, record child folders and update most-recent
+                for (i in keys.indices) {
+                    val nodeKeys = keys.subList(0, i + 1)
+                    val nodeKey = joinKeys(nodeKeys)
+                    // Update most recent
+                    val current = folderMostRecent[nodeKey]
+                    if (current == null || lastModified > current) {
+                        folderMostRecent[nodeKey] = lastModified
+                    }
+                    // Also update root "" for global sorting/top-level
+                    val rootCurrent = folderMostRecent[""]
+                    if (rootCurrent == null || lastModified > rootCurrent) {
+                        folderMostRecent[""] = lastModified
+                    }
+
+                    // Register the child folder name for its parent path
+                    val parentKey = if (i == 0) "" else joinKeys(keys.subList(0, i))
+                    val childKey = keys[i]
+                    val childDisplay = path[i].display // preserve raw display text
+                    val map = pathChildFolders.getOrPut(parentKey) { mutableMapOf() }
+                    // If same childKey appears with different display casings, keep first seen or update — choose first
+                    if (!map.containsKey(childKey)) {
+                        map[childKey] = childDisplay
+                    }
+                }
+            }
+        }
+
+        // Ensure root node exists in maps to avoid null checks later
+        folderMostRecent.putIfAbsent("", 0L)
+        pathFiles.putIfAbsent("", mutableListOf())
+
+        virtualIndexBuiltAt = System.currentTimeMillis()
+    }
+
+    override suspend fun getVirtualListing(
+        pathKeys: List<String>, sort: SortOption
+    ): VirtualListing = withContext(Dispatchers.IO) {
+        // Rebuild the virtual index each time to keep behavior consistent with refresh/save flows.
+        // Later we can optimize by reusing and invalidating on operations.
+        buildVirtualIndex(sort)
+
+        val nodeKey = joinKeys(pathKeys)
+
+        // Child folders for this node
+        val children = pathChildFolders[nodeKey].orEmpty()
+
+        val folderItems = children.map { (childKey, displayName) ->
+            val fullKeys = if (nodeKey.isEmpty()) listOf(childKey) else (pathKeys + childKey)
+            val fullKeyJoined = joinKeys(fullKeys)
+            val mostRecent = folderMostRecent[fullKeyJoined] ?: 0L
+            VirtualFolder(
+                nameDisplay = displayName,
+                nameKey = childKey,
+                fullPathKeys = fullKeys,
+                mostRecentMillis = mostRecent
+            )
+        }
+
+        // Files at this node (exact leaf matches)
+        val filesAtNode = pathFiles[nodeKey].orEmpty()
+            .distinctBy { it.file.uri.toString() } // ← Add this line
+            .toList()
+
+        // Apply sorting:
+        // - Folders are sorted using the same SortOption, where date means by mostRecentMillis.
+        // - Files are sorted using existing SortOption semantics (same as getEntries).
+        val sortedFolders = when (sort) {
+            SortOption.NAME_ASC -> folderItems.sortedBy { it.nameDisplay.lowercase(Locale.getDefault()) }
+            SortOption.NAME_DESC -> folderItems.sortedByDescending { it.nameDisplay.lowercase(Locale.getDefault()) }
+            SortOption.DATE_NEWEST -> folderItems.sortedByDescending { it.mostRecentMillis }
+            SortOption.DATE_OLDEST -> folderItems.sortedBy { it.mostRecentMillis }
+        }
+
+        val sortedFiles = when (sort) {
+            SortOption.NAME_ASC -> filesAtNode.sortedBy { it.name.lowercase(Locale.getDefault()) }
+            SortOption.NAME_DESC -> filesAtNode.sortedByDescending { it.name.lowercase(Locale.getDefault()) }
+            SortOption.DATE_NEWEST -> filesAtNode.sortedByDescending { it.file.lastModified() }
+            SortOption.DATE_OLDEST -> filesAtNode.sortedBy { it.file.lastModified() }
+        }
+
+        VirtualListing(
+            folders = sortedFolders,
+            files = sortedFiles
+        )
+    }
+
+
 }

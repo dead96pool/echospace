@@ -94,7 +94,7 @@ fun HomeScreen(
     val isVirtualMode by viewModel.isVirtualMode.collectAsState()
     val currentFolderName by viewModel.currentFolderName.collectAsState()
     // for future breadcrumb in the slimtopbar
-    val currentVirtualPath by viewModel.currentVirtualPath.collectAsState()
+    //val currentVirtualPath by viewModel.currentVirtualPath.collectAsState()
 
     val editorLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -136,19 +136,44 @@ fun HomeScreen(
         }
     }
 
-    // Handle search mode back navigation
-    BackHandler(enabled = isSearching) {
-        viewModel.setSearching(false)
-    }
+//    // Handle search mode back navigation
+//    BackHandler(enabled = isSearching) {
+//        viewModel.setSearching(false)
+//    }
+//
+//    // Handle system back button - close swipe if revealed
+//    BackHandler(enabled = revealedEntryId != null) {
+//        revealedEntryId = null
+//    }
+//
+//    // Handle back navigation for virtual folders
+//    BackHandler(enabled = isVirtualMode && currentFolderName != "EchoSpace") {
+//        viewModel.navigateUp()
+//    }
 
-    // Handle system back button - close swipe if revealed
-    BackHandler(enabled = revealedEntryId != null) {
-        revealedEntryId = null
-    }
+    // Unified back handler with proper priority ordering
+    BackHandler(enabled = true) {
+        when {
+            // Priority 1: Close search mode
+            isSearching -> {
+                viewModel.setSearching(false)
+            }
 
-    // Handle back navigation for virtual folders
-    BackHandler(enabled = isVirtualMode && currentFolderName != "EchoSpace") {
-        viewModel.navigateUp()
+            // Priority 2: Close swipe reveal (highest priority for user experience)
+            revealedEntryId != null -> {
+                revealedEntryId = null
+            }
+
+            // Priority 3: Navigate up virtual folders
+            isVirtualMode && currentFolderName != "EchoSpace" -> {
+                viewModel.navigateUp()
+            }
+
+            // Priority 4: Let system handle app exit
+            else -> {
+                // Do nothing - let the system handle back press (exit app)
+            }
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -351,8 +376,8 @@ fun HomeScreen(
                                         viewModel.navigateToFolder(folder)
                                     },
                                     isVirtualMode = true,
-                                    virtualListing = virtualListing,
-                                    currentVirtualPath = currentVirtualPath
+                                    virtualListing = virtualListing
+                                    //currentVirtualPath = currentVirtualPath
                                 )
                             }
                         } else {
@@ -385,8 +410,8 @@ fun HomeScreen(
                                     viewModel.navigateToFolder(folder)
                                 },
                                 isVirtualMode = false,
-                                virtualListing = null,
-                                currentVirtualPath = currentVirtualPath
+                                virtualListing = null
+                                //currentVirtualPath = currentVirtualPath
                             )
                         }
 
@@ -507,8 +532,8 @@ private fun FileListContent(
     snippetMap: Map<String, String> = emptyMap(),
     onFolderClick: (VirtualFolder) -> Unit = {},
     isVirtualMode: Boolean,
-    virtualListing: VirtualListing?,
-    currentVirtualPath: List<String> = emptyList()
+    virtualListing: VirtualListing?
+    //currentVirtualPath: List<String> = emptyList()
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),

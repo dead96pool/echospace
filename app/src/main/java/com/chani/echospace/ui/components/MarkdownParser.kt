@@ -13,7 +13,7 @@ data class MarkdownElement(
 )
 
 enum class MarkdownType {
-    HEADING1, HEADING2, BULLET_POINT, BLOCKQUOTE, PARAGRAPH, BLANK_LINE
+    HEADING1, HEADING2, BULLET_POINT, BLOCKQUOTE, PARAGRAPH, BLANK_LINE, HASHTAG
 }
 
 object MarkdownParser {
@@ -34,6 +34,9 @@ object MarkdownParser {
                 }
                 line.startsWith("> ") -> {
                     elements.add(MarkdownElement(MarkdownType.BLOCKQUOTE, line.substring(2)))
+                }
+                line.startsWith("#") -> {
+                    elements.add(MarkdownElement(MarkdownType.HASHTAG, line))
                 }
                 line.isBlank() -> {
                     // Preserve blank lines for spacing

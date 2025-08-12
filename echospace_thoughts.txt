@@ -1,12 +1,9 @@
 basic functionality:
-- file metadata not being displayed until openeing a virtual folder (room databse not updating until a refresh - do it on app launch)
-- reveal not dismissing inside a virtual folder
-- laggy openeing and returning from folders
+- returning changes to the first hashtag folder chain when backing from view only mode of a file
 - home button to go to home from a virtual folder (function exist navigateToRoot in homeviewmodel)
-- homescreen scrolling seems laggy and dropped frame
 - recycle bin
-- virtual File organization/folders using hashtags
 - auto add hashtags in file content
+- corrected wordcount to ignore hashtag if present
 - maybe change the formatstyle for the file hashtag in view mode
 
 - calendar option to set filename as well as the third option

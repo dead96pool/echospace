@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -22,6 +23,7 @@ fun MarkdownText(
 
     // Define theme-aware quote color once in the composable
     val quoteColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
+    val hashtagColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
 
     SelectionContainer {
         Column(
@@ -100,12 +102,21 @@ fun MarkdownText(
                                 Text(
                                     text = MarkdownParser.parseInlineFormatting(element.content, quoteColor),
                                     style = MaterialTheme.typography.bodyLarge.copy(
-                                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                        fontStyle = FontStyle.Italic,
                                         color = quoteColor
                                     )
                                 )
                             }
                         }
+                    }
+                    MarkdownType.HASHTAG -> {
+                        Text(
+                            text = element.content,
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                color = hashtagColor,
+                                fontStyle = FontStyle.Italic
+                            )
+                        )
                     }
                     MarkdownType.BLANK_LINE -> {
                         // Preserve blank line spacing

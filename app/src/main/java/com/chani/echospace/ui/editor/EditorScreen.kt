@@ -258,7 +258,7 @@ fun EditorScreen(
                 },
                 modifier = Modifier
                     .offset {
-                        IntOffset(0, fabOffsetY.roundToPx()) // ✅ Lambda version
+                        IntOffset(0, fabOffsetY.roundToPx()) // Lambda version
                     },
                 containerColor = when (saveStatus) {
                     is SaveStatus.Error -> MaterialTheme.colorScheme.error

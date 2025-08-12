@@ -3,7 +3,6 @@ basic functionality:
 - recycle bin
 - When a user types #, suggest existing tags/folder paths
 - calendar option to set filename as well as the third option
-- show breadcrumb folder path  in slimtopbar
 
 - user controlled new folder selection with documentfoldertree
 - highlight text for format editing maybe

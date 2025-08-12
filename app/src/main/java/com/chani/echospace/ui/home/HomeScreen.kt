@@ -202,7 +202,19 @@ fun HomeScreen(
                 onSearchQueryChange = { viewModel.setSearchQuery(it) },
                 onSearchStart = { viewModel.setSearching(true) },
                 onSearchEnd = { viewModel.setSearching(false) },
-                isSearchLoading = isSearchLoading
+                isSearchLoading = isSearchLoading,
+                isVirtualMode = isVirtualMode,
+                currentVirtualPath = currentVirtualPath,
+                onBreadcrumbClick = { index ->
+                    if (index == -1) {
+                        // Navigate to root
+                        viewModel.navigateToRoot()
+                    } else {
+                        // Navigate to specific breadcrumb level
+                        val targetPath = currentVirtualPath.take(index + 1)
+                        viewModel.navigateToPath(targetPath)
+                    }
+                }
             )
         },
         snackbarHost = {

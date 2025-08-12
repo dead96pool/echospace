@@ -195,6 +195,40 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    // ======= Breadcrumb navigation =======
+
+    // Navigate to a specific path level (for breadcrumb clicks)
+    fun navigateToPath(targetPath: List<String>) {
+        _currentVirtualPath.value = targetPath
+
+        // Update folder name
+        _currentFolderName.value = if (targetPath.isEmpty()) {
+            "EchoSpace"
+        } else {
+            // Format the last segment for display
+            formatDisplayName(targetPath.last())
+        }
+
+        loadEntries()
+    }
+
+    // Helper function to format display names (same as in SlimTopBar)
+    private fun formatDisplayName(input: String): String {
+        if (input.isBlank()) return input
+
+        val words = input.split(Regex("[^a-zA-Z0-9]+")).filter { it.isNotBlank() }
+
+        return words.joinToString(" ") { word ->
+            if (word.all { it.isDigit() }) {
+                word
+            } else {
+                word.lowercase(Locale.getDefault()).replaceFirstChar { char ->
+                    if (char.isLowerCase()) char.titlecase(Locale.getDefault()) else char.toString()
+                }
+            }
+        }
+    }
+
     // ======= SEARCH FUNCTIONS =======
 
     fun setSearchQuery(query: String) {

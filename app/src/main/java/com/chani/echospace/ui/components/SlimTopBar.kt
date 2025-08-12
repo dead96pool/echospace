@@ -1,6 +1,7 @@
 package com.chani.echospace.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -27,8 +28,10 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Locale
 
 @Composable
 fun SlimTopBar(
@@ -46,7 +49,10 @@ fun SlimTopBar(
     onSearchQueryChange: (String) -> Unit = {},
     onSearchStart: () -> Unit = {},
     onSearchEnd: () -> Unit = {},
-    isSearchLoading: Boolean = false
+    isSearchLoading: Boolean = false,
+    isVirtualMode: Boolean = false,
+    currentVirtualPath: List<String> = emptyList(),
+    onBreadcrumbClick: ((Int) -> Unit)? = null
 ) {
     var showDropdown by remember { mutableStateOf(false) }
 
@@ -74,15 +80,25 @@ fun SlimTopBar(
                     // Normal mode: Title + Search & Menu icons
 
                     // Title
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
-                    )
+                    if (isVirtualMode && currentVirtualPath.isNotEmpty()) {
+                        // Show breadcrumb navigation
+                        BreadcrumbNavigation(
+                            virtualPath = currentVirtualPath,
+                            onBreadcrumbClick = onBreadcrumbClick,
+                            modifier = Modifier.weight(1f)
+                        )
+                    } else {
+                        // Show regular title
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 18.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
 
                     // Right side icons: Search + Menu
                     Row(
@@ -359,6 +375,90 @@ fun SlimTopBar(
                         )
                     )
             )
+        }
+    }
+}
+
+@Composable
+private fun BreadcrumbNavigation(
+    virtualPath: List<String>,
+    onBreadcrumbClick: ((Int) -> Unit)?,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Root "EchoSpace" breadcrumb
+        if (virtualPath.isNotEmpty()) {
+            Text(
+                text = "EchoSpace",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 16.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                modifier = Modifier.clickable {
+                    onBreadcrumbClick?.invoke(-1) // -1 indicates root navigation
+                }
+            )
+        }
+
+        // Virtual folder breadcrumbs
+        virtualPath.forEachIndexed { index, pathKey ->
+            // Separator
+            Text(
+                text = " / ",
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+            )
+
+            // Breadcrumb segment
+            val isLast = index == virtualPath.size - 1
+            Text(
+                text = formatDisplayName(pathKey), // Convert to camel case
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = if (isLast) FontWeight.SemiBold else FontWeight.Normal,
+                    fontSize = if (isLast) 18.sp else 16.sp
+                ),
+                color = if (isLast) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                },
+                modifier = if (!isLast && onBreadcrumbClick != null) {
+                    Modifier.clickable {
+                        onBreadcrumbClick(index)
+                    }
+                } else {
+                    Modifier
+                },
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/**
+ * Convert virtual path key to display format with camel casing
+ * This matches your MetadataUtils.formatDisplayName functionality
+ */
+private fun formatDisplayName(input: String): String {
+    if (input.isBlank()) return input
+
+    // Split by non-alphanumeric characters to handle compound words
+    val words = input.split(Regex("[^a-zA-Z0-9]+")).filter { it.isNotBlank() }
+
+    return words.joinToString(" ") { word ->
+        // Check if word is purely numeric
+        if (word.all { it.isDigit() }) {
+            word // Keep numbers as-is
+        } else {
+            // Apply camel case to text
+            word.lowercase(Locale.getDefault()).replaceFirstChar { char ->
+                if (char.isLowerCase()) char.titlecase(Locale.getDefault()) else char.toString()
+            }
         }
     }
 }

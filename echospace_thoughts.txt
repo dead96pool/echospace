@@ -1,28 +1,21 @@
 basic functionality:
-- returning changes to the first hashtag folder chain when backing from view only mode of a file
 - home button to go to home from a virtual folder (function exist navigateToRoot in homeviewmodel)
 - recycle bin
 - auto add hashtags in file content
+- When a user types #, suggest existing tags/folder paths.
 - corrected wordcount to ignore hashtag if present
-- maybe change the formatstyle for the file hashtag in view mode
-
 - calendar option to set filename as well as the third option
-- string search treats indivudual word search / optimise the search somehow
-- search optimisation with incremental reads
+
+
 - user controlled new folder selection with documentfoldertree
-- sorting should work for virtual folders as well
-- hilt making the changes not being saved to the file
 - highlight text for format editing maybe
-- hardware support for keyboard
+- hardware support for keyboard shortcuts
 - double and single quote support
-- change the font typeface
-- better search result maybe with the virtual folder path
-- search can be non sequential just looking for keywords / better content search algorithm 
+- change the font typeface (monospace font)
 - content or title hashmaps for better search optimisation
 - option for private folder (using the #enc folder tag maybe)
 - UI for folder classification apart from the hashtags
 - select multiple files to delete them together (but not folders, delete option should not show up)
-- better animation for opening files/folders like a zoom in effect instead of screen swipe.
 - test edge cases
 
 
@@ -36,13 +29,9 @@ future features:
 - better colour selection for heading like a colourwheel (colour user selection)
 - more selection for typeface fonts (font user selection)
 - speech to text
-- AI summary to search for long forgotten notes
-- setting reminders as alarms for certain notes
 - being able to set custom folder colours
-- implement various tags along with folder structure
 - save version for files basically saving the changes history
 - archive notes
-- Are error messages localized or do you plan to add internationalization?
 - add a slimtopbar in editing screen (include title)
 - to save add a tick which is not hidden keyboard
 - editing screen textbox not to the bottom when file half filled. like highliting a text in view only mode doesnt exit the highlighting
@@ -57,7 +46,7 @@ potentially current future ideas:
 - Provide real-time syntax highlighting in the editor view
 - Add a simple popup toolbar with buttons to easily insert markdown syntax (e.g., apply bold, create a heading, insert a bullet point)
 - Expand your parser to support checklists [ ] / [x]
-- When a user types #, suggest existing tags/folder paths.
+
 
 
 

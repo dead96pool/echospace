@@ -29,8 +29,23 @@ object MetadataUtils {
             lines
         }
 
+        // Remove hashtag line (last non-empty line that starts with #)
+        val withoutHashtags = if (contentLines.isNotEmpty()) {
+            val lastNonEmptyLine = getLastNonEmptyLine(contentLines.joinToString("\n"))
+
+            if (lastNonEmptyLine != null && lastNonEmptyLine.startsWith("#") && !lastNonEmptyLine.startsWith("# ")) {
+                // Remove the last non-empty line that contains hashtags
+                val lastLineIndex = contentLines.indexOfLast { it.trim() == lastNonEmptyLine }
+                contentLines.filterIndexed { index, _ -> index != lastLineIndex }
+            } else {
+                contentLines
+            }
+        } else {
+            contentLines
+        }
+
         // Join all content lines and clean markdown
-        val cleanedContent = contentLines
+        val cleanedContent = withoutHashtags
             .joinToString(" ") // Combine all lines into one string
             .let { removeMarkdownFormatting(it) } // Remove markdown symbols
 

@@ -3,12 +3,13 @@
 package com.chani.echospace.di
 
 import android.content.Context
-import androidx.room.Room
 import com.chani.echospace.data.local.EchoSpaceDatabase
 import com.chani.echospace.data.local.DiaryMetadataDao
 import com.chani.echospace.data.local.FileManager
+import com.chani.echospace.data.local.VirtualPathDao
 import com.chani.echospace.data.preferences.ThemePreferences
 import com.chani.echospace.data.repository.DiaryRepositoryImpl
+import com.chani.echospace.data.repository.VirtualFolderRepository
 import com.chani.echospace.domain.repository.DiaryRepository
 import dagger.Module
 import dagger.Provides
@@ -31,9 +32,10 @@ object AppModule {
     @Singleton
     fun provideDiaryRepository(
         fileManager: FileManager,
-        metadataDao: DiaryMetadataDao
+        metadataDao: DiaryMetadataDao,
+        virtualFolderRepository: VirtualFolderRepository
     ): DiaryRepository {
-        return DiaryRepositoryImpl(fileManager, metadataDao)
+        return DiaryRepositoryImpl(fileManager, metadataDao, virtualFolderRepository)
     }
 
     @Provides
@@ -48,11 +50,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideEchoSpaceDatabase(@ApplicationContext context: Context): EchoSpaceDatabase {
-        return Room.databaseBuilder(
-            context,
-            EchoSpaceDatabase::class.java,
-            EchoSpaceDatabase.DATABASE_NAME
-        ).build()
+        return EchoSpaceDatabase.getDatabase(context)
     }
 
     /**
@@ -61,5 +59,10 @@ object AppModule {
     @Provides
     fun provideDiaryMetadataDao(database: EchoSpaceDatabase): DiaryMetadataDao {
         return database.diaryMetadataDao()
+    }
+
+    @Provides
+    fun provideVirtualPathDao(database: EchoSpaceDatabase): VirtualPathDao {
+        return database.virtualPathDao()
     }
 }

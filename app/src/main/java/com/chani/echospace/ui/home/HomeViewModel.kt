@@ -12,11 +12,13 @@ import com.chani.echospace.data.local.FileAlreadyExistsException
 import com.chani.echospace.data.local.FolderAccessLostException
 import com.chani.echospace.data.local.MetadataUtils
 import com.chani.echospace.data.preferences.ThemePreferences
+import com.chani.echospace.data.repository.VirtualFolderRepository
 import com.chani.echospace.domain.model.DiaryEntry
 import com.chani.echospace.domain.model.SortOption
 import com.chani.echospace.domain.repository.DiaryRepository
 import com.chani.echospace.domain.repository.VirtualListing
 import com.chani.echospace.domain.repository.VirtualFolder
+import com.chani.echospace.utils.PerformanceLogger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -33,6 +35,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import javax.inject.Inject
 import java.util.Locale
+import kotlin.system.measureTimeMillis
 
 sealed class RefreshResult {
     data class Success(val totalFiles: Int, val newFiles: Int) : RefreshResult()
@@ -56,7 +59,8 @@ data class SearchResultItem(
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val diaryRepository: DiaryRepository,
-    private val themePreferences: ThemePreferences
+    private val themePreferences: ThemePreferences,
+    private val virtualFolderRepository: VirtualFolderRepository
 ) : ViewModel() {
 
     private val _entries = MutableStateFlow<List<DiaryEntry>>(emptyList())
@@ -370,31 +374,53 @@ class HomeViewModel @Inject constructor(
 
     // Navigate into a virtual folder
     fun navigateToFolder(folder: VirtualFolder) {
-        _currentVirtualPath.value = folder.fullPathKeys
-        _currentFolderName.value = folder.nameDisplay
-        loadEntries()
+        PerformanceLogger.logStep("navigateToFolder started: ${folder.nameDisplay}")
+
+        viewModelScope.launch {
+            val totalTime = measureTimeMillis {
+                _currentVirtualPath.value = folder.fullPathKeys
+                _currentFolderName.value = folder.nameDisplay
+
+                PerformanceLogger.measureAndLog("loadEntries from navigateToFolder") {
+                    loadEntries()
+                }
+            }
+
+            Log.d("Navigation", "🏁 navigateToFolder total: ${totalTime}ms")
+            if (totalTime > 500) {
+                Log.w("Navigation", "🐌 Slow folder navigation: ${totalTime}ms")
+            }
+        }
     }
 
     // Navigate up one level (for Back button)
     fun navigateUp(): Boolean {
+        PerformanceLogger.logStep("navigateUp started")
+
         val currentPath = _currentVirtualPath.value
         if (currentPath.isEmpty()) {
-            // Already at root - let system handle back (exit app)
             return false
         }
 
-        val parentPath = currentPath.dropLast(1)
-        _currentVirtualPath.value = parentPath
+        viewModelScope.launch {
+            val totalTime = measureTimeMillis {
+                val parentPath = currentPath.dropLast(1)
+                _currentVirtualPath.value = parentPath
 
-        // Update folder name
-        _currentFolderName.value = if (parentPath.isEmpty()) {
-            "EchoSpace"
-        } else {
-            // Use the last segment as display name
-            parentPath.lastOrNull() ?: "EchoSpace"
+                _currentFolderName.value = if (parentPath.isEmpty()) {
+                    "EchoSpace"
+                } else {
+                    parentPath.lastOrNull() ?: "EchoSpace"
+                }
+
+                PerformanceLogger.measureAndLog("loadEntries from navigateUp") {
+                    loadEntries()
+                }
+            }
+
+            Log.d("Navigation", "🏁 navigateUp total: ${totalTime}ms")
         }
 
-        loadEntries()
         return true
     }
 
@@ -406,7 +432,7 @@ class HomeViewModel @Inject constructor(
     }
 
     // Handle returning from Editor (when hashtags might have changed)
-    fun handleEditorReturn(fileUri: String) {
+    private fun handleEditorReturn(fileUri: String) {
         viewModelScope.launch {
             try {
                 // Find the file that was edited

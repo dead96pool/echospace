@@ -1,4 +1,6 @@
 basic functionality:
+- file metadata not being displayed until openeing a virtual folder (room databse not updating until a refresh - do it on app launch)
+- reveal not dismissing inside a virtual folder
 - laggy openeing and returning from folders
 - home button to go to home from a virtual folder (function exist navigateToRoot in homeviewmodel)
 - homescreen scrolling seems laggy and dropped frame
@@ -7,6 +9,7 @@ basic functionality:
 - auto add hashtags in file content
 - maybe change the formatstyle for the file hashtag in view mode
 
+- calendar option to set filename as well as the third option
 - string search treats indivudual word search / optimise the search somehow
 - search optimisation with incremental reads
 - user controlled new folder selection with documentfoldertree

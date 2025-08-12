@@ -111,79 +111,119 @@ object MetadataUtils {
     // Returns the last non-empty line, trimmed of trailing newline characters but NOT inner spaces.
     private fun getLastNonEmptyLine(content: String): String? {
         if (content.isEmpty()) return null
-        var i = content.length - 1
 
-        // Skip trailing newlines
-        while (i >= 0 && (content[i] == '\n' || content[i] == '\r')) i--
-        if (i < 0) return null
+        // Split into lines and work backwards to find the last non-empty line
+        val lines = content.lines()
 
-        // Find this line bounds
-        val end = i
-        var start = i
-        while (start >= 0 && content[start] != '\n' && content[start] != '\r') start--
-        val line = content.substring(start + 1, end + 1)
-        val trimmed = line.trim()
+        for (i in lines.indices.reversed()) {
+            val trimmedLine = lines[i].trim()
+            if (trimmedLine.isNotEmpty()) {
+                return trimmedLine
+            }
+        }
 
-        if (trimmed.isNotEmpty()) return trimmed
-
-        // If blank, recurse on previous portion
-        val prev = content.substring(0, (start).coerceAtLeast(0))
-        return getLastNonEmptyLine(prev)
+        return null
     }
 
-    // Parse multiple tag runs on the same line.
-    // Example: "#a#b   #c" -> [ ["a","b"], ["c"] ]
+    /**
+     * Converts a string to proper camel case display format
+     * Examples:
+     * - "diary" -> "Diary"
+     * - "DIARY" -> "Diary"
+     * - "dream diary" -> "Dream Diary"
+     * - "dREAm DiArY" -> "Dream Diary"
+     * - "work-projects" -> "Work Projects"
+     * - "personal_notes" -> "Personal Notes"
+     */
+    private fun formatDisplayName(input: String): String {
+        if (input.isBlank()) return input
+
+        // Split by non-alphanumeric characters to handle compound words while preserving numbers
+        val words = input.split(Regex("[^a-zA-Z0-9]+")).filter { it.isNotBlank() }
+
+        return words.joinToString(" ") { word ->
+            // Check if word is purely numeric
+            if (word.all { it.isDigit() }) {
+                word // Keep numbers as-is
+            } else {
+                // Apply camel case to text
+                word.lowercase(Locale.getDefault()).replaceFirstChar { char ->
+                    if (char.isLowerCase()) char.titlecase(Locale.getDefault()) else char.toString()
+                }
+            }
+        }
+    }
+
+    // RECOMMENDED: Simpler approach - treat each # as segment boundary
     private fun parseVirtualFolderRuns(line: String): List<VirtualPath> {
         val result = mutableListOf<VirtualPath>()
-        var idx = 0
-        val len = line.length
+        val trimmed = line.trim()
 
-        fun isWhitespace(c: Char) = c == ' ' || c == '\t'
+        var i = 0
+        while (i < trimmed.length) {
+            // Skip whitespace
+            while (i < trimmed.length && trimmed[i].isWhitespace()) i++
 
-        while (idx < len) {
-            // Skip whitespace between runs
-            while (idx < len && isWhitespace(line[idx])) idx++
-            if (idx >= len) break
+            if (i >= trimmed.length) break
 
-            if (line[idx] != '#') {
-                // Ignore non-# tokens between runs
-                while (idx < len && !isWhitespace(line[idx]) && line[idx] != '#') idx++
+            // Must start with #
+            if (trimmed[i] != '#') {
+                // Skip until next whitespace or end
+                while (i < trimmed.length && !trimmed[i].isWhitespace()) i++
                 continue
             }
 
-            // Start of a run (a path)
-            val segments = mutableListOf<VirtualSegment>()
+            // Collect this run (until next whitespace+# or end)
+            val runStart = i
+            var runEnd = i
 
-            while (idx < len && line[idx] == '#') {
-                // Count consecutive '#'
-                var hashStart = idx
-                while (idx < len && line[idx] == '#') idx++
-                val hashCount = idx - hashStart
+            // Find the end of this run
+            while (runEnd < trimmed.length) {
+                if (runEnd > runStart && trimmed[runEnd].isWhitespace()) {
+                    // Check if next non-whitespace is #
+                    var nextChar = runEnd + 1
+                    while (nextChar < trimmed.length && trimmed[nextChar].isWhitespace()) nextChar++
 
-                val literalPrefixCount = hashCount - 1
-                val literalPrefix = if (literalPrefixCount > 0) "#".repeat(literalPrefixCount) else ""
-
-                // Collect segment body until next '#' or whitespace
-                val segStart = idx
-                while (idx < len && line[idx] != '#' && !isWhitespace(line[idx])) idx++
-                val body = line.substring(segStart, idx)
-
-                if (body.isNotEmpty()) {
-                    val raw = literalPrefix + body
-                    val key = raw.lowercase(Locale.getDefault())
-                    segments.add(VirtualSegment(key = key, display = raw))
+                    if (nextChar < trimmed.length && trimmed[nextChar] == '#') {
+                        // This whitespace marks end of current run
+                        break
+                    } else {
+                        // This whitespace is within the current segment
+                        runEnd++
+                    }
+                } else {
+                    runEnd++
                 }
-
-                // If next is whitespace, this run ends
-                if (idx < len && isWhitespace(line[idx])) break
             }
+
+            // Parse this run
+            val runText = trimmed.substring(runStart, runEnd).trim()
+            val segments = parseRunIntoSegments(runText)
 
             if (segments.isNotEmpty()) {
                 result.add(segments)
             }
+
+            i = runEnd
         }
 
         return result
+    }
+
+    // Helper function to parse a single run into segments
+    private fun parseRunIntoSegments(runText: String): List<VirtualSegment> {
+        val segments = mutableListOf<VirtualSegment>()
+
+        // Split by # but preserve structure
+        val parts = runText.split("#").filter { it.isNotBlank() }
+
+        for (part in parts) {
+            val key = part.trim().lowercase(Locale.getDefault())
+            val display = formatDisplayName(part.trim())
+            segments.add(VirtualSegment(key = key, display = display))
+        }
+
+        return segments
     }
 
     // Utility to pretty-print a virtual path for UI or debugging: "folder/sub/leaf" using display names.

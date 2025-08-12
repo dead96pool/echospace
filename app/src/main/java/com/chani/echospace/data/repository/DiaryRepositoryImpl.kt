@@ -4,7 +4,7 @@ package com.chani.echospace.data.repository
 
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
-import com.chani.echospace.data.local.DiaryMetadata
+//import com.chani.echospace.data.local.DiaryMetadata
 import com.chani.echospace.data.local.DiaryMetadataDao
 import com.chani.echospace.data.local.FileManager
 import com.chani.echospace.data.local.FileOperationResult
@@ -13,7 +13,6 @@ import com.chani.echospace.domain.model.DiaryEntry
 import com.chani.echospace.domain.model.SortOption
 import com.chani.echospace.domain.repository.DiaryRepository
 import com.chani.echospace.domain.repository.VirtualListing
-import kotlinx.coroutines.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import android.util.Log
@@ -70,43 +69,43 @@ class DiaryRepositoryImpl @Inject constructor(
         }
     }
 
-    /**
-     * NEW: Smart metadata management
-     * Gets cached metadata or calculates if needed
-     */
-    private suspend fun getOrCalculateMetadata(file: DocumentFile): DiaryMetadata? {
-        return try {
-            val fileUri = file.uri.toString()
-            val currentLastModified = file.lastModified()
-
-            // Check if we have up-to-date cached metadata
-            val cachedMetadata = metadataDao.getMetadata(fileUri)
-
-            if (cachedMetadata != null && cachedMetadata.lastModified == currentLastModified) {
-                // Cached metadata is current - return it (fast path)
-                return cachedMetadata
-            }
-
-            // Need to calculate new metadata (slow path, but cached afterward)
-            val content = fileManager.readFile(file)
-            val wordCount = MetadataUtils.countWords(content)
-
-            val newMetadata = DiaryMetadata(
-                fileUri = fileUri,
-                wordCount = wordCount,
-                lastModified = currentLastModified,
-                fileName = file.name ?: "Untitled"
-            )
-
-            // Cache the new metadata for future use
-            metadataDao.insertMetadata(newMetadata)
-            newMetadata
-
-        } catch (e: Exception) {
-            Log.w("DiaryRepository", "Failed to get metadata for ${file.name}", e)
-            null // Graceful fallback - entry will display without metadata
-        }
-    }
+//    /**
+//     * NEW: Smart metadata management
+//     * Gets cached metadata or calculates if needed
+//     */
+//    private suspend fun getOrCalculateMetadata(file: DocumentFile): DiaryMetadata? {
+//        return try {
+//            val fileUri = file.uri.toString()
+//            val currentLastModified = file.lastModified()
+//
+//            // Check if we have up-to-date cached metadata
+//            val cachedMetadata = metadataDao.getMetadata(fileUri)
+//
+//            if (cachedMetadata != null && cachedMetadata.lastModified == currentLastModified) {
+//                // Cached metadata is current - return it (fast path)
+//                return cachedMetadata
+//            }
+//
+//            // Need to calculate new metadata (slow path, but cached afterward)
+//            val content = fileManager.readFile(file)
+//            val wordCount = MetadataUtils.countWords(content)
+//
+//            val newMetadata = DiaryMetadata(
+//                fileUri = fileUri,
+//                wordCount = wordCount,
+//                lastModified = currentLastModified,
+//                fileName = file.name ?: "Untitled"
+//            )
+//
+//            // Cache the new metadata for future use
+//            metadataDao.insertMetadata(newMetadata)
+//            newMetadata
+//
+//        } catch (e: Exception) {
+//            Log.w("DiaryRepository", "Failed to get metadata for ${file.name}", e)
+//            null // Graceful fallback - entry will display without metadata
+//        }
+//    }
 
     /**
      * File validation (enhanced with better error handling)
@@ -139,8 +138,8 @@ class DiaryRepositoryImpl @Inject constructor(
         // NEW: Clean up metadata cache after successful deletion
         if (result) {
             try {
+                // UPDATED: Clean database immediately
                 metadataDao.deleteMetadata(entry.file.uri.toString())
-                // UPDATED: Use VirtualFolderRepository for cache invalidation
                 virtualFolderRepository.invalidateCachedPaths(listOf(entry.file.uri.toString()))
             } catch (e: Exception) {
                 Log.w("DiaryRepository", "Failed to delete metadata", e)
@@ -163,20 +162,8 @@ class DiaryRepositoryImpl @Inject constructor(
                 val oldUri = entry.file.uri.toString()
                 val newUri = newFile.uri.toString()
 
-                val existingMetadata = metadataDao.getMetadata(oldUri)
-                if (existingMetadata != null) {
-                    // Delete old metadata entry
-                    metadataDao.deleteMetadata(oldUri)
-                    // Insert with new URI and filename
-                    metadataDao.insertMetadata(
-                        existingMetadata.copy(
-                            fileUri = newUri,
-                            fileName = newName
-                        )
-                    )
-                }
-                // UPDATED: Use VirtualFolderRepository for cache invalidation
-                virtualFolderRepository.invalidateCachedPaths(listOf(oldUri, newUri))
+                // UPDATED: Use VirtualFolderRepository for comprehensive sync
+                virtualFolderRepository.invalidateAndResyncFiles(listOf(oldUri, newUri))
             } catch (e: Exception) {
                 Log.w("DiaryRepository", "Failed to update metadata after rename", e)
                 // Continue normally - rename was successful
@@ -196,16 +183,8 @@ class DiaryRepositoryImpl @Inject constructor(
 
         if (result is FileOperationResult.Success) {
             try {
-                val wordCount = MetadataUtils.countWords(content)
-                val metadata = DiaryMetadata(
-                    fileUri = file.uri.toString(),
-                    wordCount = wordCount,
-                    lastModified = file.lastModified(),
-                    fileName = file.name ?: "Untitled"
-                )
-                metadataDao.insertMetadata(metadata)
-                // UPDATED: Use VirtualFolderRepository for cache invalidation
-                virtualFolderRepository.invalidateCachedPaths(listOf(file.uri.toString()))
+                // UPDATED: Use VirtualFolderRepository for immediate sync
+                virtualFolderRepository.invalidateAndResyncFiles(listOf(file.uri.toString()))
 
             } catch (e: Exception) {
                 Log.w("DiaryRepository", "Failed to update metadata after save", e)
@@ -222,35 +201,16 @@ class DiaryRepositoryImpl @Inject constructor(
     override suspend fun refreshAllMetadata() {
         withContext(Dispatchers.IO) {
             try {
-                val files = fileManager.getFiles().filter { isFileValid(it) }
-                val existingMetadata = metadataDao.getAllMetadata()
-                val existingUris = existingMetadata.associateBy { it.fileUri }
+                Log.d("DiaryRepository", "🔄 Starting comprehensive database refresh")
 
-                val filesToUpdate = files.filter { file ->
-                    val existing = existingUris[file.uri.toString()]
-                    existing == null || existing.lastModified != file.lastModified()
+                // Use VirtualFolderRepository for complete sync
+                val syncResult = virtualFolderRepository.syncDatabaseWithFileSystem(forceFullSync = true)
+
+                if (syncResult.success) {
+                    Log.d("DiaryRepository", "✅ Refresh completed: ${syncResult.filesProcessed} files processed")
+                } else {
+                    Log.e("DiaryRepository", "❌ Refresh failed: ${syncResult.error}")
                 }
-
-                Log.d("DiaryRepository", "Refreshing ${filesToUpdate.size} of ${files.size} files")
-
-                filesToUpdate.chunked(5).forEach { chunk ->
-                    coroutineScope {
-                        chunk.map { file ->
-                            async {
-                                getOrCalculateMetadata(file)
-                            }
-                        }.awaitAll()
-                    }
-                }
-
-                val currentUris = files.map { it.uri.toString() }.toSet()
-                val orphanedMetadata = existingUris.keys - currentUris
-                orphanedMetadata.forEach { orphanedUri ->
-                    metadataDao.deleteMetadata(orphanedUri)
-                }
-                // Use VirtualFolderRepository for cleanup
-                val allEntries = getEntries(SortOption.NAME_ASC)
-                virtualFolderRepository.cleanupStaleEntries(allEntries)
 
             } catch (e: Exception) {
                 Log.e("DiaryRepository", "Failed to refresh metadata", e)
@@ -268,6 +228,17 @@ class DiaryRepositoryImpl @Inject constructor(
             PerformanceLogger.measureAndLog("buildVirtualListingFromDatabase") {
                 virtualFolderRepository.buildVirtualListingFromDatabase(pathKeys, sort)
             }
+        }
+    }
+
+    // NEW: Add method to check if database sync is needed
+    override suspend fun isDatabaseSyncNeeded(): Boolean {
+        return try {
+            // Delegate to repository/virtual folder repository
+            virtualFolderRepository.isDatabaseSyncNeeded()
+        } catch (e: Exception) {
+            Log.w("HomeViewModel", "Failed to check sync status: ${e.message}")
+            true // Assume sync needed on error
         }
     }
 

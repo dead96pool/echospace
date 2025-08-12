@@ -1,7 +1,7 @@
 package com.chani.echospace.data.repository
 
 import android.content.Context
-import android.net.Uri
+//import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import com.chani.echospace.data.local.*
 import com.chani.echospace.domain.model.DiaryEntry
@@ -17,6 +17,16 @@ import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import androidx.core.net.toUri
+
+data class DatabaseSyncResult(
+    val success: Boolean,
+    val filesProcessed: Int = 0,
+    val newFiles: Int = 0,
+    val updatedFiles: Int = 0,
+    val deletedFiles: Int = 0,
+    val syncTimeMs: Long = 0,
+    val error: String? = null
+)
 
 @Singleton
 class VirtualFolderRepository @Inject constructor(
@@ -41,7 +51,7 @@ class VirtualFolderRepository @Inject constructor(
     }
 
     // Get or compute virtual paths for a file (with Room caching)
-    suspend fun getVirtualPathsForFile(entry: DiaryEntry): List<VirtualPath> = withContext(Dispatchers.IO) {
+    private suspend fun getVirtualPathsForFile(entry: DiaryEntry): List<VirtualPath> = withContext(Dispatchers.IO) {
         val fileUri = entry.file.uri.toString()
         val currentModified = entry.file.lastModified()
 
@@ -225,134 +235,178 @@ class VirtualFolderRepository @Inject constructor(
         )
     }
 
-    suspend fun refreshVirtualPathsForFiles(fileUris: List<String>) {
-        withContext(Dispatchers.IO) {
+    // NEW: Complete database synchronization with file system
+    suspend fun syncDatabaseWithFileSystem(forceFullSync: Boolean = false): DatabaseSyncResult {
+        return withContext(Dispatchers.IO) {
             try {
-                val allEntries = fileManager.getFiles()
-                    .filter { it.exists() && it.uri.toString() in fileUris }
-                    .map { file ->
-                        DiaryEntry(file, file.name?.removeSuffix(".txt") ?: "Untitled")
-                    }
+                Log.d("VirtualFolderRepo", "🔄 Starting database sync with file system")
+                val startTime = System.currentTimeMillis()
 
-                for (entry in allEntries) {
-                    Log.d("VirtualFolderRepo", "🔄 Refreshing virtual paths for: ${entry.name}")
-                    getVirtualPathsForFile(entry) // This will update the database
+                // Get current files from SAF
+                val currentFiles = PerformanceLogger.measureAndLog("Get files from SAF") {
+                    fileManager.getFiles().filter {
+                        try {
+                            it.exists() && it.canRead() && (it.name?.endsWith(".txt") == true)
+                        } catch (e: Exception) {
+                            Log.w("VirtualFolderRepo", "Failed to validate file ${it.name}: ${e.message}")
+                            false
+                        }
+                    }
                 }
+
+                // Get existing database entries
+                val existingMetadata = metadataDao.getAllMetadata()
+                val existingVirtualPaths = virtualPathDao.getAllVirtualPaths()
+
+                val metadataByUri = existingMetadata.associateBy { it.fileUri }
+                val virtualPathsByUri = existingVirtualPaths.associateBy { it.fileUri }
+
+                var newFiles = 0
+                var updatedFiles = 0
+                var deletedFiles = 0
+
+                // Process current files
+                for (file in currentFiles) {
+                    val fileUri = file.uri.toString()
+                    val currentModified = file.lastModified()
+
+                    val existingMeta = metadataByUri[fileUri]
+                    val existingVPath = virtualPathsByUri[fileUri]
+
+                    // Check if file needs processing
+                    val needsMetadataUpdate = existingMeta == null ||
+                            existingMeta.lastModified != currentModified || forceFullSync
+                    val needsVirtualPathUpdate = existingVPath == null ||
+                            existingVPath.lastModified != currentModified || forceFullSync
+
+                    if (needsMetadataUpdate || needsVirtualPathUpdate) {
+                        try {
+                            // Create DiaryEntry for processing
+                            val entry = DiaryEntry(
+                                file = file,
+                                name = file.name?.removeSuffix(".txt") ?: "Untitled"
+                            )
+
+                            // Update metadata if needed
+                            if (needsMetadataUpdate) {
+                                val content = fileManager.readFile(file)
+                                val wordCount = MetadataUtils.countWords(content)
+
+                                val metadata = DiaryMetadata(
+                                    fileUri = fileUri,
+                                    wordCount = wordCount,
+                                    lastModified = currentModified,
+                                    fileName = file.name ?: "Untitled"
+                                )
+
+                                metadataDao.insertMetadata(metadata)
+
+                                if (existingMeta == null) newFiles++ else updatedFiles++
+                            }
+
+                            // Update virtual paths if needed
+                            if (needsVirtualPathUpdate) {
+                                // This will compute and cache new virtual paths
+                                getVirtualPathsForFile(entry)
+                            }
+
+                        } catch (e: Exception) {
+                            Log.e("VirtualFolderRepo", "Failed to sync file ${file.name}: ${e.message}")
+                        }
+                    }
+                }
+
+                // Clean up deleted files
+                val currentUris = currentFiles.map { it.uri.toString() }.toSet()
+
+                // Remove orphaned metadata
+                val orphanedMetadata = existingMetadata.filter { it.fileUri !in currentUris }
+                for (orphaned in orphanedMetadata) {
+                    metadataDao.deleteMetadata(orphaned.fileUri)
+                    deletedFiles++
+                }
+
+                // Remove orphaned virtual paths
+                val orphanedVirtualPaths = existingVirtualPaths.filter { it.fileUri !in currentUris }
+                if (orphanedVirtualPaths.isNotEmpty()) {
+                    virtualPathDao.deleteVirtualPathsByFileUris(orphanedVirtualPaths.map { it.fileUri })
+                }
+
+                val syncTime = System.currentTimeMillis() - startTime
+                Log.d("VirtualFolderRepo", "✅ Database sync completed in ${syncTime}ms: $newFiles new, $updatedFiles updated, $deletedFiles deleted")
+
+                DatabaseSyncResult(
+                    success = true,
+                    filesProcessed = currentFiles.size,
+                    newFiles = newFiles,
+                    updatedFiles = updatedFiles,
+                    deletedFiles = deletedFiles,
+                    syncTimeMs = syncTime
+                )
+
             } catch (e: Exception) {
-                Log.e("VirtualFolderRepo", "Failed to refresh virtual paths: ${e.message}")
+                Log.e("VirtualFolderRepo", "Failed to sync database: ${e.message}", e)
+                DatabaseSyncResult(success = false, error = e.message)
             }
         }
     }
 
-    // Build virtual folder structure from all files (using cached paths)
-    suspend fun buildVirtualListing(
-        allEntries: List<DiaryEntry>,
-        currentPathKeys: List<String>,
-        sortOption: SortOption
-    ): VirtualListing = withContext(Dispatchers.IO) {
+    // NEW: Check if database needs sync (lightweight check)
+    suspend fun isDatabaseSyncNeeded(): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val fileCount = fileManager.getFiles().filter {
+                    it.exists() && it.name?.endsWith(".txt") == true
+                }.size
+                val metadataCount = metadataDao.getAllMetadata().size
 
-        Log.d("VirtualFolderRepo", "🏗️ Building virtual listing for path: ${currentPathKeys.joinToString("/")}")
+                // If counts don't match, sync is needed
+                fileCount != metadataCount
 
-        // Maps for building the virtual structure
-        val folderMostRecent: MutableMap<String, Long> = mutableMapOf()
-        val pathFiles: MutableMap<String, MutableList<DiaryEntry>> = mutableMapOf()
-        val pathChildFolders: MutableMap<String, MutableMap<String, String>> = mutableMapOf()
-
-        fun joinKeys(keys: List<String>): String = keys.joinToString("/")
-
-        // Process each file (this will be fast due to caching)
-        for (entry in allEntries) {
-            val virtualPaths = getVirtualPathsForFile(entry)
-
-            if (virtualPaths.isEmpty()) {
-                // Root file
-                val key = ""
-                pathFiles.getOrPut(key) { mutableListOf() }.add(entry)
-                val current = folderMostRecent[key]
-                val lastModified = entry.file.lastModified()
-                if (current == null || lastModified > current) {
-                    folderMostRecent[key] = lastModified
-                }
-            } else {
-                // Virtual paths
-                for (path in virtualPaths) {
-                    val keys = path.map { it.key }
-                    val leafKey = joinKeys(keys)
-                    pathFiles.getOrPut(leafKey) { mutableListOf() }.add(entry)
-
-                    val lastModified = entry.file.lastModified()
-
-                    // Update folder timestamps and register child folders
-                    for (i in keys.indices) {
-                        val nodeKeys = keys.subList(0, i + 1)
-                        val nodeKey = joinKeys(nodeKeys)
-
-                        // Update most recent timestamp
-                        val current = folderMostRecent[nodeKey]
-                        if (current == null || lastModified > current) {
-                            folderMostRecent[nodeKey] = lastModified
-                        }
-
-                        // Update root timestamp
-                        val rootCurrent = folderMostRecent[""]
-                        if (rootCurrent == null || lastModified > rootCurrent) {
-                            folderMostRecent[""] = lastModified
-                        }
-
-                        // Register child folder
-                        val parentKey = if (i == 0) "" else joinKeys(keys.subList(0, i))
-                        val childKey = keys[i]
-                        val childDisplay = path[i].display
-                        val map = pathChildFolders.getOrPut(parentKey) { mutableMapOf() }
-                        if (!map.containsKey(childKey)) {
-                            map[childKey] = childDisplay
-                        }
-                    }
-                }
+            } catch (e: Exception) {
+                Log.w("VirtualFolderRepo", "Failed to check sync status: ${e.message}")
+                true // Assume sync needed on error
             }
         }
+    }
 
-        // Build the result for current path
-        val nodeKey = joinKeys(currentPathKeys)
-        val children = pathChildFolders[nodeKey].orEmpty()
+    // NEW: Invalidate specific files and trigger resync
+    suspend fun invalidateAndResyncFiles(fileUris: List<String>) {
+        withContext(Dispatchers.IO) {
+            try {
+                // Remove from cache
+                invalidateCachedPaths(fileUris)
 
-        val folderItems = children.map { (childKey, displayName) ->
-            val fullKeys = if (nodeKey.isEmpty()) listOf(childKey) else (currentPathKeys + childKey)
-            val fullKeyJoined = joinKeys(fullKeys)
-            val mostRecent = folderMostRecent[fullKeyJoined] ?: 0L
-            VirtualFolder(
-                nameDisplay = displayName,
-                nameKey = childKey,
-                fullPathKeys = fullKeys,
-                mostRecentMillis = mostRecent
-            )
+                // Get current files that match the URIs
+                val currentFiles = fileManager.getFiles().filter {
+                    it.uri.toString() in fileUris && it.exists()
+                }
+
+                // Resync these specific files
+                for (file in currentFiles) {
+                    val entry = DiaryEntry(file, file.name?.removeSuffix(".txt") ?: "Untitled")
+
+                    // Update metadata
+                    val content = fileManager.readFile(file)
+                    val wordCount = MetadataUtils.countWords(content)
+                    val metadata = DiaryMetadata(
+                        fileUri = file.uri.toString(),
+                        wordCount = wordCount,
+                        lastModified = file.lastModified(),
+                        fileName = file.name ?: "Untitled"
+                    )
+                    metadataDao.insertMetadata(metadata)
+
+                    // Update virtual paths
+                    getVirtualPathsForFile(entry)
+                }
+
+                Log.d("VirtualFolderRepo", "✅ Resynced ${currentFiles.size} files")
+
+            } catch (e: Exception) {
+                Log.e("VirtualFolderRepo", "Failed to resync files: ${e.message}")
+            }
         }
-
-        val filesAtNode = pathFiles[nodeKey].orEmpty()
-            .distinctBy { it.file.uri.toString() }
-            .toList()
-
-        // Apply sorting
-        val sortedFolders = when (sortOption) {
-            SortOption.NAME_ASC -> folderItems.sortedBy { it.nameDisplay.lowercase(Locale.getDefault()) }
-            SortOption.NAME_DESC -> folderItems.sortedByDescending { it.nameDisplay.lowercase(Locale.getDefault()) }
-            SortOption.DATE_NEWEST -> folderItems.sortedByDescending { it.mostRecentMillis }
-            SortOption.DATE_OLDEST -> folderItems.sortedBy { it.mostRecentMillis }
-        }
-
-        val sortedFiles = when (sortOption) {
-            SortOption.NAME_ASC -> filesAtNode.sortedBy { it.name.lowercase(Locale.getDefault()) }
-            SortOption.NAME_DESC -> filesAtNode.sortedByDescending { it.name.lowercase(Locale.getDefault()) }
-            SortOption.DATE_NEWEST -> filesAtNode.sortedByDescending { it.file.lastModified() }
-            SortOption.DATE_OLDEST -> filesAtNode.sortedBy { it.file.lastModified() }
-        }
-
-        Log.d("VirtualFolderRepo", "✅ Built listing: ${sortedFolders.size} folders, ${sortedFiles.size} files")
-
-        return@withContext VirtualListing(
-            folders = sortedFolders,
-            files = sortedFiles
-        )
     }
 
     // Clean up stale virtual path entries
@@ -368,11 +422,11 @@ class VirtualFolderRepository @Inject constructor(
                     Log.d("VirtualFolderRepo", "🗑️ Cleaned up ${staleUris.size} stale virtual path entries")
                 }
                 // ADD THIS: Explicit return to make it clear this function returns Unit
-                return@withContext Unit
+                return@withContext
             } catch (e: Exception) {
                 Log.e("VirtualFolderRepo", "Failed to cleanup stale entries: ${e.message}")
                 // ADD THIS: Explicit return in catch block too
-                return@withContext Unit
+                return@withContext
             }
         }
     }

@@ -170,6 +170,29 @@ class HomeViewModel @Inject constructor(
                     }
                 }
         }
+
+        // NEW: Sync database on app launch
+        viewModelScope.launch {
+            try {
+                // Check if sync is needed (lightweight check first)
+                val syncNeeded = diaryRepository.isDatabaseSyncNeeded()
+
+                if (syncNeeded) {
+                    Log.d("HomeViewModel", "🔄 Database sync needed on app launch")
+                    diaryRepository.refreshAllMetadata() // This will trigger full sync
+                } else {
+                    Log.d("HomeViewModel", "✅ Database is up to date")
+                }
+
+                // Load initial entries
+                loadEntries()
+
+            } catch (e: Exception) {
+                Log.e("HomeViewModel", "Failed to sync on app launch", e)
+                // Fallback: load entries anyway
+                loadEntries()
+            }
+        }
     }
 
     // ======= SEARCH FUNCTIONS =======

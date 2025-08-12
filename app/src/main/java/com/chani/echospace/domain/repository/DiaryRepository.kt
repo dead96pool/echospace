@@ -30,4 +30,5 @@ interface DiaryRepository {
     suspend fun refreshAllMetadata()
     suspend fun saveFolderUri(uri: Uri)
     suspend fun getVirtualListing(pathKeys: List<String>, sort: SortOption): VirtualListing
+    suspend fun isDatabaseSyncNeeded(): Boolean
 }

@@ -459,7 +459,14 @@ fun HomeScreen(
                         showCreateDialog = false
                         val timeFormatter = SimpleDateFormat("hh:mm a", Locale.getDefault())
                         val timestamp = timeFormatter.format(Date())
-                        val initialContent = "# $fileName $timestamp\n\n"
+                        //val initialContent = "# $fileName $timestamp\n\n"
+                        val initialContent = buildInitialContent(
+                            fileName = fileName,
+                            timestamp = timestamp,
+                            currentVirtualPath = currentVirtualPath,
+                            isVirtualMode = isVirtualMode
+                        )
+
                         val intent = Intent(context, EditorActivity::class.java).apply {
                             putExtra("file_uri", file.uri.toString())
                             putExtra("start_in_edit_mode", true)
@@ -514,6 +521,24 @@ fun HomeScreen(
             }
         )
     }
+}
+
+private fun buildInitialContent(
+    fileName: String,
+    timestamp: String,
+    currentVirtualPath: List<String>,
+    isVirtualMode: Boolean
+): String {
+    // Build the hashtag chain if in virtual folder mode
+    val hashtagChain = if (isVirtualMode && currentVirtualPath.isNotEmpty()) {
+        val hashtags = "#${currentVirtualPath.joinToString("#")}"
+        "\n\n\n$hashtags"
+    } else {
+        ""
+    }
+
+    // Format: header + cursor position + hashtags
+    return "# $fileName $timestamp\n\n<CURSOR_POSITION>$hashtagChain"
 }
 
 

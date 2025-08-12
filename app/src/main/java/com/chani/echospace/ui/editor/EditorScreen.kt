@@ -147,13 +147,30 @@ fun EditorScreen(
     // Load content using ViewModel method instead of direct calls
     LaunchedEffect(initialContent) {
         if (initialContent != null) {
-            // Set the editor's text state, but DON'T save to file yet
-            viewModel.updateTextContent(
-                TextFieldValue(
-                    text = initialContent,
-                    selection = TextRange(initialContent.length)
+            // Check if content contains cursor position marker
+            val cursorMarker = "<CURSOR_POSITION>"
+            if (initialContent.contains(cursorMarker)) {
+                // Remove cursor marker and set cursor position
+                val cleanContent = initialContent.replace(cursorMarker, "")
+                val cursorPosition = initialContent.indexOf(cursorMarker)
+                // Set the editor's text state, but DON'T save to file yet
+                viewModel.updateTextContent(
+                    TextFieldValue(
+                        text = cleanContent,
+                        selection = TextRange(cursorPosition)
+                    )
                 )
-            )
+            } else {
+                // Standard behavior - cursor at end
+                viewModel.updateTextContent(
+                    TextFieldValue(
+                        text = initialContent,
+                        selection = TextRange(initialContent.length)
+                    )
+                )
+            }
+
+
             // set `isContentLoaded` flag true here to avoid loading file content
             viewModel.markContentLoaded()
         } else {

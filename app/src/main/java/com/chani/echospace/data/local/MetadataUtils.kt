@@ -44,6 +44,7 @@ object MetadataUtils {
     /**
      * Removes markdown formatting symbols while preserving content
      */
+    @Suppress("RegExpRedundantEscape")
     private fun removeMarkdownFormatting(text: String): String {
         var cleaned = text
 
@@ -157,73 +158,34 @@ object MetadataUtils {
     // RECOMMENDED: Simpler approach - treat each # as segment boundary
     private fun parseVirtualFolderRuns(line: String): List<VirtualPath> {
         val result = mutableListOf<VirtualPath>()
-        val trimmed = line.trim()
 
-        var i = 0
-        while (i < trimmed.length) {
-            // Skip whitespace
-            while (i < trimmed.length && trimmed[i].isWhitespace()) i++
+        // Use regex to split by whitespace followed by hashtag, preserving the hashtag
+        // This handles: "#diary dream #work#projects" -> ["#diary dream", "#work#projects"]
+        val runs = line.trim().split(Regex("(?=\\s+#)")).filter { it.isNotBlank() }
 
-            if (i >= trimmed.length) break
+        for (run in runs) {
+            val trimmedRun = run.trim()
+            if (!trimmedRun.startsWith("#")) continue
 
-            // Must start with #
-            if (trimmed[i] != '#') {
-                // Skip until next whitespace or end
-                while (i < trimmed.length && !trimmed[i].isWhitespace()) i++
-                continue
+            // Split by # to get segments within this run, filter empty ones
+            val segmentTexts = trimmedRun.split("#").filter { it.isNotBlank() }
+
+            if (segmentTexts.isEmpty()) continue
+
+            val segments = mutableListOf<VirtualSegment>()
+
+            for (segmentText in segmentTexts) {
+                val key = segmentText.lowercase(Locale.getDefault())
+                val display = formatDisplayName(segmentText)
+                segments.add(VirtualSegment(key = key, display = display))
             }
-
-            // Collect this run (until next whitespace+# or end)
-            val runStart = i
-            var runEnd = i
-
-            // Find the end of this run
-            while (runEnd < trimmed.length) {
-                if (runEnd > runStart && trimmed[runEnd].isWhitespace()) {
-                    // Check if next non-whitespace is #
-                    var nextChar = runEnd + 1
-                    while (nextChar < trimmed.length && trimmed[nextChar].isWhitespace()) nextChar++
-
-                    if (nextChar < trimmed.length && trimmed[nextChar] == '#') {
-                        // This whitespace marks end of current run
-                        break
-                    } else {
-                        // This whitespace is within the current segment
-                        runEnd++
-                    }
-                } else {
-                    runEnd++
-                }
-            }
-
-            // Parse this run
-            val runText = trimmed.substring(runStart, runEnd).trim()
-            val segments = parseRunIntoSegments(runText)
 
             if (segments.isNotEmpty()) {
                 result.add(segments)
             }
-
-            i = runEnd
         }
 
         return result
-    }
-
-    // Helper function to parse a single run into segments
-    private fun parseRunIntoSegments(runText: String): List<VirtualSegment> {
-        val segments = mutableListOf<VirtualSegment>()
-
-        // Split by # but preserve structure
-        val parts = runText.split("#").filter { it.isNotBlank() }
-
-        for (part in parts) {
-            val key = part.trim().lowercase(Locale.getDefault())
-            val display = formatDisplayName(part.trim())
-            segments.add(VirtualSegment(key = key, display = display))
-        }
-
-        return segments
     }
 
     // Utility to pretty-print a virtual path for UI or debugging: "folder/sub/leaf" using display names.

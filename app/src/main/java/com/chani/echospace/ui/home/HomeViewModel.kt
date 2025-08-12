@@ -12,7 +12,6 @@ import com.chani.echospace.data.local.FileAlreadyExistsException
 import com.chani.echospace.data.local.FolderAccessLostException
 import com.chani.echospace.data.local.MetadataUtils
 import com.chani.echospace.data.preferences.ThemePreferences
-import com.chani.echospace.data.repository.VirtualFolderRepository
 import com.chani.echospace.domain.model.DiaryEntry
 import com.chani.echospace.domain.model.SortOption
 import com.chani.echospace.domain.repository.DiaryRepository
@@ -59,8 +58,7 @@ data class SearchResultItem(
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val diaryRepository: DiaryRepository,
-    private val themePreferences: ThemePreferences,
-    private val virtualFolderRepository: VirtualFolderRepository
+    private val themePreferences: ThemePreferences
 ) : ViewModel() {
 
     private val _entries = MutableStateFlow<List<DiaryEntry>>(emptyList())
@@ -118,10 +116,12 @@ class HomeViewModel @Inject constructor(
 
     // Track when editor returns
     private val _editorReturned = MutableStateFlow<String?>(null)
+    private val sourceVirtualPath = MutableStateFlow<List<String>>(emptyList())
 
     // Call when opening editor
-    fun startEditingFile(fileUri: String) {
+    fun startEditingFile(fileUri: String, sourcePath: List<String> = currentVirtualPath.value) {
         _currentlyEditingFile.value = fileUri
+        sourceVirtualPath.value = sourcePath // Store where we came from
     }
 
     // Call when editor returns
@@ -468,15 +468,34 @@ class HomeViewModel @Inject constructor(
                     val virtualPaths = MetadataUtils.buildVirtualPathsFromContent(content)
 
                     if (virtualPaths.isNotEmpty()) {
-                        // Navigate to the first virtual path of the file
-                        val firstPath = virtualPaths.first()
-                        val pathKeys = firstPath.map { it.key }
-                        _currentVirtualPath.value = pathKeys
-                        _currentFolderName.value = firstPath.lastOrNull()?.display ?: "EchoSpace"
+                        val storedSourcePath = sourceVirtualPath.value
+                        val matchingPath = virtualPaths.find { path ->
+                            val pathKeys = path.map { it.key }
+                            // Check if this path matches our source path
+                            pathKeys == storedSourcePath
+                        }
+
+                        if (matchingPath != null) {
+                            // Navigate back to the original folder
+                            val pathKeys = matchingPath.map { it.key }
+                            _currentVirtualPath.value = pathKeys
+                            _currentFolderName.value = matchingPath.lastOrNull()?.display ?: "EchoSpace"
+                        } else {
+                            // If original path no longer exists, go to first available path
+                            val firstPath = virtualPaths.first()
+                            val pathKeys = firstPath.map { it.key }
+                            _currentVirtualPath.value = pathKeys
+                            _currentFolderName.value = firstPath.lastOrNull()?.display ?: "EchoSpace"
+                        }
+                    } else {
+                        // File has no hashtags, go to root
+                        _currentVirtualPath.value = emptyList()
+                        _currentFolderName.value = "EchoSpace"
                     }
                 }
 
-                // Reload entries to reflect changes
+                // Clear the source path after use
+                sourceVirtualPath.value = emptyList()
                 loadEntries()
 
             } catch (e: Exception) {

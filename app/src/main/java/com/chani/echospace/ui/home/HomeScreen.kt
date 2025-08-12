@@ -94,7 +94,7 @@ fun HomeScreen(
     val isVirtualMode by viewModel.isVirtualMode.collectAsState()
     val currentFolderName by viewModel.currentFolderName.collectAsState()
     // for future breadcrumb in the slimtopbar
-    //val currentVirtualPath by viewModel.currentVirtualPath.collectAsState()
+    val currentVirtualPath by viewModel.currentVirtualPath.collectAsState()
 
     val editorLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -353,11 +353,12 @@ fun HomeScreen(
                                     onRevealedEntryIdChange = { revealedEntryId = it },
                                     onItemClick = { entry ->
                                         revealedEntryId = null
-                                        viewModel.startEditingFile(entry.file.uri.toString())
+                                        viewModel.startEditingFile(entry.file.uri.toString(), currentVirtualPath)
                                         val intent = Intent(context, EditorActivity::class.java).apply {
                                             putExtra("file_uri", entry.file.uri.toString())
                                             putExtra("startineditmode", false)
                                             putExtra("initialcontent", "")
+                                            //putExtra("source_virtual_path", currentVirtualPath.toTypedArray())
                                         }
                                         editorLauncher.launch(intent)
                                     },

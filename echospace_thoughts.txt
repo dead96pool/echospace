@@ -1,4 +1,5 @@
 basic functionality:
+- scrollable breadcrumb
 - home button to go to home from a virtual folder (function exist navigateToRoot in homeviewmodel)
 - recycle bin
 - When a user types #, suggest existing tags/folder paths

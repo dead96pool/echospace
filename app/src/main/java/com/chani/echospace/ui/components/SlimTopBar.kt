@@ -31,6 +31,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.chani.echospace.ui.icons.CustomIcons
 import java.util.Locale
 
 @Composable
@@ -391,16 +392,16 @@ private fun BreadcrumbNavigation(
     ) {
         // Root "EchoSpace" breadcrumb
         if (virtualPath.isNotEmpty()) {
-            Text(
-                text = "EchoSpace",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 16.sp
-                ),
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                modifier = Modifier.clickable {
-                    onBreadcrumbClick?.invoke(-1) // -1 indicates root navigation
-                }
+            Icon(
+                imageVector = CustomIcons.Home, // Rounded home icon
+                contentDescription = "Home",
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                modifier = Modifier
+                    .size(32.dp) // Size to match text height
+                    .clickable {
+                        onBreadcrumbClick?.invoke(-1) // Navigate to root
+                    }
+                    .padding(1.dp) // Small padding for better touch target
             )
         }
 

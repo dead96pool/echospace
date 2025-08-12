@@ -204,4 +204,36 @@ object CustomIcons {
             close()
         }
     }.build()
+
+    val Home: ImageVector = ImageVector.Builder(
+        name = "Home",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 960f,
+        viewportHeight = 960f
+    ).apply {
+        path(
+            fill = SolidColor(Color.Black),
+            fillAlpha = 1.0f,
+            stroke = null,
+            strokeAlpha = 1.0f,
+            strokeLineWidth = 1.0f,
+            strokeLineCap = StrokeCap.Butt,
+            strokeLineJoin = StrokeJoin.Miter,
+            strokeLineMiter = 1.0f,
+            pathFillType = PathFillType.NonZero
+        ) {
+            moveTo(160f, 840f)
+            lineTo(160f, 400f)
+            lineTo(480f, 170f)
+            lineTo(800f, 400f)
+            lineTo(800f, 840f)
+            lineTo(590f, 840f)
+            lineTo(590f, 580f)
+            lineTo(390f, 580f)
+            lineTo(390f, 840f)
+            lineTo(160f, 840f)
+            close()
+        }
+    }.build()
 }

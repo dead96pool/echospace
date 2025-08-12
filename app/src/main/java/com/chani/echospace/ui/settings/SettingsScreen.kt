@@ -8,7 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.rounded.DoneAll
 import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.Folder
@@ -83,8 +83,9 @@ fun SettingsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            imageVector = Icons.Filled.ArrowBackIosNew,
+                            contentDescription = "Back",
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 },

@@ -3,6 +3,9 @@ package com.chani.echospace.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -86,7 +89,9 @@ fun SlimTopBar(
                         BreadcrumbNavigation(
                             virtualPath = currentVirtualPath,
                             onBreadcrumbClick = onBreadcrumbClick,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
                         )
                     } else {
                         // Show regular title
@@ -386,38 +391,55 @@ private fun BreadcrumbNavigation(
     onBreadcrumbClick: ((Int) -> Unit)?,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Root "EchoSpace" breadcrumb
+    val lazyRowState = rememberLazyListState()
+
+    // Auto-scroll to show the current (last) breadcrumb when path changes
+    LaunchedEffect(virtualPath.size) {
         if (virtualPath.isNotEmpty()) {
+            lazyRowState.animateScrollToItem(virtualPath.size) // Scroll to show the last item
+        }
+    }
+
+    // Horizontal scrollable row for breadcrumbs
+    LazyRow(
+        state = lazyRowState,
+        modifier = modifier,
+        horizontalArrangement = Arrangement.Start,
+        verticalAlignment = Alignment.CenterVertically,
+        contentPadding = PaddingValues(horizontal = 4.dp) // Small padding for better appearance
+    ) {
+        // Root home icon
+        item(key = "home") {
             Icon(
-                imageVector = CustomIcons.Home, // Rounded home icon
+                imageVector = CustomIcons.Home, // Your custom home icon
                 contentDescription = "Home",
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 modifier = Modifier
-                    .size(32.dp) // Size to match text height
+                    .size(28.dp)
                     .clickable {
                         onBreadcrumbClick?.invoke(-1) // Navigate to root
                     }
-                    .padding(1.dp) // Small padding for better touch target
+                    .padding(2.dp)
             )
         }
 
         // Virtual folder breadcrumbs
-        virtualPath.forEachIndexed { index, pathKey ->
+        itemsIndexed(
+            items = virtualPath,
+            key = { index, pathKey -> "breadcrumb_${index}_$pathKey" }
+        ) { index, pathKey ->
             // Separator
             Text(
                 text = " / ",
                 style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                modifier = Modifier.padding(horizontal = 2.dp)
             )
 
             // Breadcrumb segment
             val isLast = index == virtualPath.size - 1
             Text(
-                text = formatDisplayName(pathKey), // Convert to camel case
+                text = formatDisplayName(pathKey),
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = if (isLast) FontWeight.SemiBold else FontWeight.Normal,
                     fontSize = if (isLast) 18.sp else 16.sp
@@ -427,16 +449,25 @@ private fun BreadcrumbNavigation(
                 } else {
                     MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 },
-                modifier = if (!isLast && onBreadcrumbClick != null) {
-                    Modifier.clickable {
-                        onBreadcrumbClick(index)
-                    }
-                } else {
-                    Modifier
-                },
+                modifier = Modifier
+                    .then(
+                        if (!isLast && onBreadcrumbClick != null) {
+                            Modifier.clickable {
+                                onBreadcrumbClick(index)
+                            }
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .padding(horizontal = 4.dp), // Padding around each breadcrumb item
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Clip // No ellipsis since we're scrolling
             )
+        }
+
+        // Add extra spacing at the end to ensure the last item isn't cut off
+        item(key = "end_spacer") {
+            Spacer(modifier = Modifier.width(8.dp))
         }
     }
 }

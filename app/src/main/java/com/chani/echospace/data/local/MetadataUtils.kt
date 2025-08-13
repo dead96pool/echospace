@@ -120,7 +120,8 @@ object MetadataUtils {
     // only check last line
     fun buildVirtualPathsFromContent(content: String): List<VirtualPath> {
         val lastLine = getLastNonEmptyLine(content) ?: return emptyList()
-        if (!lastLine.startsWith("#")) return emptyList()
+        // if last line title markdown then ignore
+        if (!lastLine.startsWith("#") || lastLine.startsWith("# ")) return emptyList()
         return parseVirtualFolderRuns(lastLine)
     }
 

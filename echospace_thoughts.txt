@@ -1,5 +1,6 @@
 basic functionality:
 - recycle bin
+- improve visual for dropdown menu
 - When a user types #, suggest existing tags/folder paths
 - calendar option to set filename as well as the third option
 
